@@ -22,6 +22,9 @@
       <item identifier="ITEM-ACTIVITY" identifierref="RES-ACTIVITY" isvisible="true">
         <title>Activité interactive</title>
       </item>
+      <item identifier="ITEM-RECOUV-PP" identifierref="RES-RECOUV-PP" isvisible="true">
+        <title>Recouvrement p-p</title>
+      </item>
     </organization>
   </organizations>
   <resources>
@@ -36,6 +39,9 @@
     </resource>
     <resource identifier="RES-ACTIVITY" type="webcontent" href="activity.html">
       <file href="activity.html"/>
+    </resource>
+    <resource identifier="RES-RECOUV-PP" type="webcontent" href="activite_recouvrement_pp.html">
+      <file href="activite_recouvrement_pp.html"/>
     </resource>
   </resources>
 </manifest>
