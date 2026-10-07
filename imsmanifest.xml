@@ -9,7 +9,7 @@
   </metadata>
   <organizations default="ORG-1">
     <organization identifier="ORG-1" structure="hierarchical">
-      <title>Visualisation du recouvrement s-p</title>
+      <title>Orbitales atomiques et recouvrement</title>
       <item identifier="ITEM-INTRO" identifierref="RES-INTRO" isvisible="true">
         <title>Introduction</title>
       </item>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visualisation du recouvrement s-p — Introduction</title>
+<title>Orbitales atomiques et recouvrement — Introduction</title>
 <style>
 @import url('data:text/css,');
 :root {
@@ -101,7 +101,7 @@ li { margin: 0.3em 0; }
 
 <header>
   <div class="chapter">Chimie quantique — M1 Chimie Théorique</div>
-  <h1>Visualisation du recouvrement s–p</h1>
+  <h1>Représenter les orbitales atomiques et visualiser leur recouvrement</h1>
 </header>
 
 <h2>Contexte</h2>
@@ -113,23 +113,59 @@ li { margin: 0.3em 0; }
 S<sub>AB</sub> = ∫ ψ<sub>A</sub>(r) · ψ<sub>B</sub>(r) d<sup>3</sup>r
 </div>
 
-<h2>Le cas s–p</h2>
-<p>Le recouvrement entre une orbitale 1s (sphérique) et une orbitale 2p<sub>x</sub> (bilobée, avec un plan nodal) présente un comportement riche et instructif :</p>
+<p>Le signe du produit ψ<sub>A</sub>·ψ<sub>B</sub> varie d'un point à l'autre : S<sub>AB</sub> résulte de la compétition entre les zones où les deux fonctions ont le même signe (contribution positive) et celles où elles sont de signes opposés (contribution négative).</p>
+
+<h2>Représenter une orbitale : les contours d'isovaleur</h2>
+<p>Une orbitale est une fonction des trois coordonnées de l'espace ; on ne peut pas la « dessiner » directement. On choisit une valeur ψ<sub>0</sub>, appelée <strong>isovaleur</strong>, et on trace la surface sur laquelle |ψ| = ψ<sub>0</sub>. Dans un plan, cette surface apparaît comme un contour.</p>
 
 <ul>
-  <li>Lorsque l'orbitale 1s approche <strong>le long de l'axe du lobe</strong> (axe x), le recouvrement est maximal en valeur absolue — c'est la situation de recouvrement de type <strong>π</strong>.</li>
-  <li>Lorsque la 1s approche <strong>perpendiculairement</strong> (le long de l'axe z), elle chevauche autant le lobe positif que le lobe négatif, et le recouvrement total est <strong>nul par symétrie</strong> — c'est la situation <strong>σ</strong> nulle.</li>
-  <li>Dans les positions intermédiaires, le recouvrement prend des valeurs intermédiaires dont le signe dépend de la position relative.</li>
+  <li>Pour une orbitale <strong>s</strong>, ψ ne dépend que de la distance r au noyau : le contour est un <strong>cercle</strong> (une sphère en 3D), dont le rayon dépend de l'exposant ζ et de l'isovaleur choisie.</li>
+  <li>Pour une orbitale <strong>p</strong>, ψ = N r cos θ e<sup>−ζr</sup> change de signe à travers un <strong>plan nodal</strong> : on obtient deux lobes, l'un à +ψ<sub>0</sub> et l'autre à −ψ<sub>0</sub>, qui ne passent pas par le noyau.</li>
 </ul>
 
+<p>La taille apparente d'une orbitale dépend donc de l'isovaleur choisie : c'est une convention de représentation, pas une propriété de l'orbitale.</p>
+
+<h2>Le cas s–p</h2>
+<p>Le recouvrement entre une orbitale 1s (sphérique) et une orbitale 2p (bilobée, avec un plan nodal) dépend de la position de la 1s par rapport à l'axe de la 2p :</p>
+
+<ul>
+  <li>Lorsque la 1s se trouve <strong>sur l'axe de la 2p</strong>, elle recouvre essentiellement un seul lobe : le recouvrement est de type <strong>σ</strong>. Il est positif face au lobe +, négatif face au lobe −.</li>
+  <li>Lorsque la 1s se trouve <strong>dans le plan nodal</strong> de la 2p, elle recouvre autant le lobe positif que le lobe négatif : les deux contributions se compensent et le recouvrement est <strong>nul par symétrie</strong>.</li>
+  <li>Dans les positions intermédiaires, le recouvrement prend des valeurs intermédiaires dont le signe dépend du lobe le plus recouvert.</li>
+</ul>
+
+<h2>Le cas p–p</h2>
+<p>Avec deux orbitales p, le recouvrement dépend à la fois de la position de B et de l'<strong>orientation</strong> de son axe :</p>
+
+<ul>
+  <li><strong>Recouvrement σ</strong> : les deux axes sont alignés avec l'axe internucléaire. Les lobes se font face et le recouvrement est important en valeur absolue. Si les deux orbitales pointent dans le même sens, c'est le lobe + de A qui fait face au lobe − de B : S<sub>σ</sub> est alors négatif.</li>
+  <li><strong>Recouvrement π</strong> : les deux axes sont parallèles entre eux et perpendiculaires à l'axe internucléaire. Les lobes se recouvrent latéralement et le recouvrement est plus faible qu'en σ à distance égale.</li>
+  <li><strong>Recouvrement nul</strong> : par exemple lorsque les deux axes sont perpendiculaires et que B est sur l'axe de A. Les zones positives et négatives du produit se compensent exactement.</li>
+  <li><strong>Signe</strong> : tourner B de 180° change le signe de ψ<sub>B</sub>, donc celui de S. Le signe de S dépend ainsi de la phase choisie pour chaque orbitale.</li>
+</ul>
+
+<p>Pour une orientation quelconque, le recouvrement se décompose sur ces deux situations de référence. Avec <b>u</b> et <b>v</b> les vecteurs unitaires portés par les axes des deux orbitales p et <b>d</b> celui de l'axe internucléaire :</p>
+
+<div class="formula">
+S = (<b>u</b>·<b>d</b>)(<b>v</b>·<b>d</b>) S<sub>σ</sub> + [<b>u</b>·<b>v</b> − (<b>u</b>·<b>d</b>)(<b>v</b>·<b>d</b>)] S<sub>π</sub>
+</div>
+
+<p>Par exemple, si B est sur l'axe de A et tourné d'un angle φ, on a S = S<sub>σ</sub> cos φ.</p>
+
 <div class="note">
-<strong>Objectif pédagogique :</strong> dans cette activité, vous allez déplacer librement une orbitale 1s autour d'une orbitale 2p<sub>x</sub> fixe et observer en temps réel les zones de recouvrement positif et négatif, ainsi que la valeur numérique de l'intégrale de recouvrement normalisée.
+<strong>Objectifs pédagogiques :</strong> comprendre ce que représente le contour dessiné pour une orbitale s ou p, puis déplacer (et tourner) une orbitale autour d'une orbitale fixe pour observer en temps réel les zones où le produit ψ<sub>A</sub>·ψ<sub>B</sub> est positif ou négatif, ainsi que la valeur de l'intégrale de recouvrement normalisée.
 </div>
 
 <h2>Modèle utilisé</h2>
-<p>Les orbitales sont représentées par des fonctions hydrogénoïdes simplifiées dans le plan (x, z). Le calcul du recouvrement est effectué par intégration numérique 2D sur la zone d'interpénétration des deux orbitales. La normalisation garantit que S ∈ [−1, +1].</p>
+<p>Les activités de <strong>tracé</strong> utilisent les orbitales de Slater normalisées en 3D :</p>
 
-<p>Les tailles des orbitales (paramètres de Slater effectifs) sont ajustables par des curseurs interactifs, permettant d'explorer l'effet de la taille relative des orbitales sur le recouvrement.</p>
+<div class="formula">
+ψ<sub>1s</sub> = (ζ<sup>3</sup>/π)<sup>1/2</sup> e<sup>−ζr</sup> &nbsp;&nbsp;&nbsp; ψ<sub>2p<sub>z</sub></sub> = (ζ<sup>5</sup>/π)<sup>1/2</sup> z e<sup>−ζr</sup>
+</div>
+
+<p>Les activités de <strong>recouvrement</strong> utilisent des fonctions de même forme, mais restreintes au plan (x, z). L'intégrale de recouvrement y est calculée par intégration numérique 2D, puis normalisée pour que S ∈ [−1, +1]. Les valeurs obtenues reproduisent correctement les tendances (signes, symétries, effet de la distance et de l'orientation), mais ce ne sont pas les valeurs numériques exactes du recouvrement en 3D.</p>
+
+<p>Les tailles des orbitales (exposants de Slater ζ) sont ajustables par des curseurs : plus ζ est grand, plus l'orbitale est contractée autour de son noyau.</p>
 
 <h2>Activités</h2>
 <p><strong>1. Tracé d'une orbitale s.</strong> Avant d'étudier le recouvrement, comprendre ce que représente le contour dessiné pour une orbitale : on fait varier l'exposant ζ et l'isovaleur ψ<sub>0</sub>, et on relie le cercle obtenu dans le plan à la courbe radiale ψ(r).</p>
@@ -138,10 +174,10 @@ S<sub>AB</sub> = ∫ ψ<sub>A</sub>(r) · ψ<sub>B</sub>(r) d<sup>3</sup>r
 <p style="margin-top:2em;"><strong>2. Tracé d'une orbitale p.</strong> Même démarche pour une orbitale 2p<sub>z</sub> orientée le long de l'axe horizontal : deux lobes de signes opposés, deux isovaleurs ±ψ<sub>0</sub>, et un contour qui coupe l'axe en deux points de chaque côté du noyau.</p>
 <a href="activite_trace_p.html" class="start-btn">Tracé d'une orbitale p →</a>
 
-<p style="margin-top:2em;"><strong>3. Recouvrement s–p.</strong> Déplacer une orbitale 1s autour d'une orbitale 2p<sub>x</sub> et suivre l'intégrale de recouvrement.</p>
-<a href="activity.html" class="start-btn">Lancer l'activité interactive →</a>
+<p style="margin-top:2em;"><strong>3. Recouvrement s–p.</strong> Déplacer une orbitale 1s autour d'une orbitale 2p<sub>x</sub> fixe et suivre l'intégrale de recouvrement : rechercher les positions de recouvrement σ maximal et celles de recouvrement nul.</p>
+<a href="activity.html" class="start-btn">Recouvrement s–p →</a>
 
-<p style="margin-top:2em;"><strong>4. Recouvrement p–p.</strong> Une orbitale 2p est fixe le long de l'axe z ; la seconde peut être déplacée et tournée de 0 à 360° dans le plan. Observer les recouvrements de type σ, π et les situations de recouvrement nul par symétrie.</p>
+<p style="margin-top:2em;"><strong>4. Recouvrement p–p.</strong> Une orbitale 2p est fixe le long de l'axe z ; la seconde peut être déplacée et tournée de 0 à 360° dans le plan. Identifier les configurations σ et π, comparer leurs valeurs à distance égale, et repérer les situations de recouvrement nul par symétrie.</p>
 <a href="activite_recouvrement_pp.html" class="start-btn">Recouvrement p–p →</a>
 
 </div>
