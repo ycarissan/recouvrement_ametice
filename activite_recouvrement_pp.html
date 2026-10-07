@@ -108,6 +108,17 @@ canvas {
   text-align: right;
   font-family: "Courier New", monospace;
 }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-top: -0.4em;
+  margin-bottom: 1em;
+  cursor: pointer;
+}
+.checkbox-row input { accent-color: var(--accent2); }
 .results { margin-top: 0.5em; }
 .results h2 { color: var(--accent2); }
 .result-row {
@@ -226,16 +237,16 @@ a.back {
     <div class="param-group">
       <label>Taille de A, fixe (ζ<sub>A</sub>)</label>
       <div class="slider-row">
-        <input type="range" id="sliderZetaA" min="0.5" max="4.0" step="0.05" value="2.0">
-        <span class="val" id="valZetaA">2.00</span>
+        <input type="range" id="sliderZetaA" min="0.5" max="4.0" step="0.05" value="2.5">
+        <span class="val" id="valZetaA">2.50</span>
       </div>
     </div>
 
     <div class="param-group">
       <label>Taille de B, mobile (ζ<sub>B</sub>)</label>
       <div class="slider-row">
-        <input type="range" id="sliderZetaB" min="0.5" max="4.0" step="0.05" value="2.0">
-        <span class="val" id="valZetaB">2.00</span>
+        <input type="range" id="sliderZetaB" min="0.5" max="4.0" step="0.05" value="2.5">
+        <span class="val" id="valZetaB">2.50</span>
       </div>
     </div>
 
@@ -246,6 +257,11 @@ a.back {
         <span class="val" id="valPhi">0°</span>
       </div>
     </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="chkProduct">
+      <span>Afficher le produit ψ<sub>A</sub>·ψ<sub>B</sub></span>
+    </label>
 
     <div class="results">
       <h2>Recouvrement</h2>
@@ -327,8 +343,8 @@ const CONFIG = {
   initPhi: 0,     // degrés, angle de l'axe de B avec l'axe z
 
   // Exposants de Slater par défaut
-  defaultZetaA: 2.00,
-  defaultZetaB: 2.00,
+  defaultZetaA: 2.50,
+  defaultZetaB: 2.50,
 
   // Résolution de la grille d'affichage du produit (pixels par point)
   gridStep: 2,
@@ -348,6 +364,7 @@ const CONFIG = {
   atomRadius: 5,
   handleRadius: 7,
   minHandlePx: 45,
+  signOffsetPx: 18,     // décalage des signes + / − hors de l'axe des orbitales
 };
 
 /* =============================================================
@@ -359,6 +376,7 @@ let state = {
   phi: CONFIG.initPhi,
   zetaA: CONFIG.defaultZetaA,
   zetaB: CONFIG.defaultZetaB,
+  showProduct: false,
   dragging: null,   // null | "move" | "rotate"
 };
 
@@ -380,6 +398,7 @@ const barPos = document.getElementById("barPos");
 const barNeg = document.getElementById("barNeg");
 const coordsEl = document.getElementById("coords");
 const btnReset = document.getElementById("btnReset");
+const chkProduct = document.getElementById("chkProduct");
 
 // Canvas hors écran pour la carte du produit (une cellule = un point de grille)
 const gridW = Math.ceil(CONFIG.canvasW / CONFIG.gridStep);
@@ -539,17 +558,23 @@ function drawPLobe(cx, cy, phi, zeta, sign, fillColor, strokeColor, dashed) {
   ctx.restore();
 }
 
-/** Signes + / − au centre des lobes */
+/**
+ * Signes + / − dans les lobes, décalés perpendiculairement à l'axe
+ * de l'orbitale pour ne pas se confondre avec les axes tracés
+ */
 function drawLobeSigns(cx, cy, phi, zeta) {
   const d = 1.2 / zeta;
+  // décalage perpendiculaire (canvas), du côté « haut » de l'axe
+  const offX = -CONFIG.signOffsetPx * Math.sin(phi);
+  const offY = -CONFIG.signOffsetPx * Math.cos(phi);
   ctx.font = "bold 16px 'Palatino Linotype', Georgia, serif";
   ctx.textAlign = "center";
   const [pX, pY] = worldToCanvas(cx + d * Math.cos(phi), cy + d * Math.sin(phi));
   const [mX, mY] = worldToCanvas(cx - d * Math.cos(phi), cy - d * Math.sin(phi));
   ctx.fillStyle = "rgba(200, 60, 40, 0.7)";
-  ctx.fillText("+", pX, pY + 5);
+  ctx.fillText("+", pX + offX, pY + offY + 5);
   ctx.fillStyle = "rgba(40, 80, 180, 0.7)";
-  ctx.fillText("−", mX, mY + 5);
+  ctx.fillText("−", mX + offX, mY + offY + 5);
 }
 
 /** Position de la poignée de rotation (canvas), au bout du lobe + de B */
@@ -598,21 +623,23 @@ function draw(maxAbsProd) {
   ctx.fillText("x", ox + 8, 16);
 
   // === Produit ψA·ψB (même code couleur que l'activité s–p) ===
-  const max = maxAbsProd;
-  const data = offImg.data;
-  for (let k = 0; k < prodGrid.length; k++) {
-    const prod = prodGrid[k];
-    const intensity = max > 0 ? Math.min(1, Math.abs(prod) / max) : 0;
-    const o = 4 * k;
-    if (intensity < CONFIG.productThreshold) { data[o + 3] = 0; continue; }
-    const alpha = 0.12 + intensity * 0.55;
-    if (prod > 0) { data[o] = 200; data[o + 1] = 40; data[o + 2] = 30; }
-    else { data[o] = 30; data[o + 1] = 80; data[o + 2] = 180; }
-    data[o + 3] = Math.round(alpha * 255);
+  if (state.showProduct) {
+    const max = maxAbsProd;
+    const data = offImg.data;
+    for (let k = 0; k < prodGrid.length; k++) {
+      const prod = prodGrid[k];
+      const intensity = max > 0 ? Math.min(1, Math.abs(prod) / max) : 0;
+      const o = 4 * k;
+      if (intensity < CONFIG.productThreshold) { data[o + 3] = 0; continue; }
+      const alpha = 0.12 + intensity * 0.55;
+      if (prod > 0) { data[o] = 200; data[o + 1] = 40; data[o + 2] = 30; }
+      else { data[o] = 30; data[o + 1] = 80; data[o + 2] = 180; }
+      data[o + 3] = Math.round(alpha * 255);
+    }
+    offCtx.putImageData(offImg, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(offCvs, 0, 0, gridW * CONFIG.gridStep, gridH * CONFIG.gridStep);
   }
-  offCtx.putImageData(offImg, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(offCvs, 0, 0, gridW * CONFIG.gridStep, gridH * CONFIG.gridStep);
 
   // === Lobes de A (fixe, axe z) ===
   drawPLobe(0, 0, 0, zetaA, +1, "rgba(200, 60, 40, 0.18)", "rgba(200, 60, 40, 0.55)", false);
@@ -804,6 +831,11 @@ sliderPhi.addEventListener("input", () => {
   update();
 });
 
+chkProduct.addEventListener("change", () => {
+  state.showProduct = chkProduct.checked;
+  update();
+});
+
 /* =============================================================
    RESET
    ============================================================= */
@@ -817,6 +849,8 @@ btnReset.addEventListener("click", () => {
   valZetaA.textContent = CONFIG.defaultZetaA.toFixed(2);
   valZetaB.textContent = CONFIG.defaultZetaB.toFixed(2);
   setPhi(CONFIG.initPhi);
+  state.showProduct = false;
+  chkProduct.checked = false;
   update();
 });
 

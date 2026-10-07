@@ -108,6 +108,17 @@ canvas {
   text-align: right;
   font-family: "Courier New", monospace;
 }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-top: -0.4em;
+  margin-bottom: 1em;
+  cursor: pointer;
+}
+.checkbox-row input { accent-color: var(--accent2); }
 .results { margin-top: 0.5em; }
 .results h2 { color: var(--accent2); }
 .result-row {
@@ -233,6 +244,11 @@ a.back {
       </div>
     </div>
 
+    <label class="checkbox-row">
+      <input type="checkbox" id="chkProduct">
+      <span>Afficher le produit ψ<sub>A</sub>·ψ<sub>B</sub></span>
+    </label>
+
     <div class="results">
       <h2>Recouvrement</h2>
       <div class="result-row">
@@ -334,6 +350,7 @@ let state = {
   by: CONFIG.initBy,
   zetaP: CONFIG.defaultZetaP,
   zetaS: CONFIG.defaultZetaS,
+  showProduct: false,
   dragging: false,
 };
 
@@ -353,6 +370,7 @@ const barPos = document.getElementById("barPos");
 const barNeg = document.getElementById("barNeg");
 const coordsEl = document.getElementById("coords");
 const btnReset = document.getElementById("btnReset");
+const chkProduct = document.getElementById("chkProduct");
 
 /* =============================================================
    FONCTIONS DE CONVERSION MONDE <-> CANVAS
@@ -544,7 +562,7 @@ function draw() {
   }
 
   // Dessiner les cellules colorées
-  if (maxAbsProd > 0) {
+  if (state.showProduct && maxAbsProd > 0) {
     for (const { px, py, prod } of products) {
       const intensity = Math.min(1, Math.abs(prod) / maxAbsProd);
       const alpha = 0.12 + intensity * 0.55;
@@ -775,6 +793,11 @@ sliderZetaS.addEventListener("input", () => {
   update();
 });
 
+chkProduct.addEventListener("change", () => {
+  state.showProduct = chkProduct.checked;
+  update();
+});
+
 /* =============================================================
    RESET
    ============================================================= */
@@ -787,6 +810,8 @@ btnReset.addEventListener("click", () => {
   sliderZetaS.value = CONFIG.defaultZetaS;
   valZetaP.textContent = CONFIG.defaultZetaP.toFixed(2);
   valZetaS.textContent = CONFIG.defaultZetaS.toFixed(2);
+  state.showProduct = false;
+  chkProduct.checked = false;
   update();
 });
 
