@@ -11,3 +11,12 @@ Fichiers nécessaires :
  - activite_recouvrement_sp.html : recouvrement s–p
  - activite_recouvrement_pp.html : recouvrement p–p
  - activite_diagramme_om.html : diagrammes d'orbitales moléculaires
+
+Pour générer l'archive à déposer dans Moodle :
+
+    make          # construit activites_atomistique.zip (imsmanifest.xml à la racine)
+    make list     # affiche le contenu de l'archive
+    make clean    # supprime l'archive
+
+La liste des fichiers est lue dans imsmanifest.xml : pour ajouter une activité,
+il suffit de la déclarer dans le manifeste.
