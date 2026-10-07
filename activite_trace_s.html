@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tracé d'une orbitale s — Activité interactive</title>
+<style>
+:root {
+  --ink: #1a1a2e;
+  --paper: #faf8f4;
+  --accent: #b8432f;
+  --accent2: #2a5d8f;
+  --rule: #c9bfab;
+  --muted: #7a7062;
+  --s-orb: rgba(100, 160, 60, 0.15);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1em;
+}
+header {
+  width: 100%;
+  max-width: 840px;
+  border-bottom: 2px solid var(--ink);
+  padding: 0.8em 0 0.5em;
+  margin-bottom: 1em;
+}
+header .chapter {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+header h1 {
+  font-size: 1.45em;
+  font-weight: normal;
+  font-style: italic;
+}
+.main-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2em;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+  align-items: flex-start;
+}
+.left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  max-width: 720px;
+  width: 100%;
+}
+.canvas-wrap {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  position: relative;
+}
+.canvas-title {
+  font-size: 0.82em;
+  color: var(--muted);
+  padding: 0.3em 0.7em 0;
+  font-style: italic;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.panel {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  padding: 1.2em 1.4em;
+  min-width: 230px;
+  max-width: 260px;
+}
+.panel h2 {
+  font-size: 1em;
+  font-weight: bold;
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.3em;
+  margin-bottom: 0.8em;
+}
+.param-group { margin-bottom: 1.2em; }
+.param-group label {
+  display: block;
+  font-size: 0.88em;
+  color: var(--muted);
+  margin-bottom: 0.3em;
+}
+.param-group .slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.param-group input[type=range] {
+  flex: 1;
+  accent-color: var(--accent2);
+  height: 6px;
+}
+.param-group .val {
+  font-size: 0.88em;
+  font-weight: bold;
+  min-width: 2.5em;
+  text-align: right;
+  font-family: "Courier New", monospace;
+}
+.param-group .val.wide { min-width: 4.8em; }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-top: -0.4em;
+  margin-bottom: 1em;
+}
+.checkbox-row input { accent-color: var(--accent2); }
+.results { margin-top: 0.5em; }
+.results h2 { color: var(--accent2); }
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35em 0;
+  border-bottom: 1px dotted var(--rule);
+  font-size: 0.92em;
+}
+.result-row:last-child { border-bottom: none; }
+.result-row .label { color: var(--muted); }
+.result-row .value {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 1em;
+}
+.result-row .value.pos { color: var(--accent); }
+.result-row .value.total { color: var(--ink); font-size: 1.15em; }
+.bar-container {
+  margin-top: 0.8em;
+  background: #f0ece4;
+  height: 18px;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--rule);
+}
+.bar-fill {
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(100, 160, 60, 0.55);
+  transition: width 0.15s;
+}
+.bar-caption {
+  font-size: 0.78em;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 0.2em;
+}
+.warning {
+  margin-top: 0.8em;
+  font-size: 0.82em;
+  color: var(--accent);
+  min-height: 1.2em;
+}
+button.reset {
+  display: block;
+  width: 100%;
+  margin-top: 1.2em;
+  padding: 0.6em;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95em;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.2s;
+}
+button.reset:hover { background: #963727; }
+.legend {
+  margin-top: 1em;
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.25em 0;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.legend-line {
+  width: 14px;
+  height: 0;
+  flex-shrink: 0;
+}
+.explain {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  padding: 0.9em 1.3em;
+  font-size: 0.92em;
+}
+.explain h2 {
+  font-size: 1em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.3em;
+  margin-bottom: 0.5em;
+}
+.explain ol { margin: 0.3em 0 0.3em 1.4em; }
+.explain li { margin: 0.25em 0; }
+.formula {
+  text-align: center;
+  padding: 0.5em 1em;
+  margin: 0.6em 0;
+  background: #f0ece4;
+  border-left: 3px solid var(--accent2);
+  font-family: "Cambria Math", "Times New Roman", serif;
+}
+a.back {
+  display: inline-block;
+  margin-top: 1em;
+  font-size: 0.88em;
+  color: var(--accent2);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="chapter">Chimie quantique — Activité interactive</div>
+  <h1>Tracé d'une orbitale s : contour d'isovaleur</h1>
+</header>
+
+<div class="main-container">
+
+  <div class="left-col">
+    <div class="canvas-wrap">
+      <div class="canvas-title">Plan (x, z) : section de la surface d'isovaleur ψ = cste</div>
+      <canvas id="cvs2d" width="720" height="420"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <div class="canvas-title">Coupe le long de l'axe z (x = 0) : ψ(z), avec r = |z|</div>
+      <canvas id="cvsProf" width="720" height="280"></canvas>
+    </div>
+
+    <div class="explain">
+      <h2>Principe du tracé</h2>
+      <div class="formula">
+        ψ<sub>1s</sub>(r) = (ζ<sup>3</sup>/π)<sup>1/2</sup> e<sup>−ζr</sup>
+      </div>
+      <ol>
+        <li>On choisit une <strong>isovaleur</strong> ψ<sub>0</sub> (ligne pointillée sur la coupe).</li>
+        <li>On cherche les points où ψ(r) = ψ<sub>0</sub> : comme ψ ne dépend que de r, la solution est un rayon unique
+          r<sub>0</sub> = ln(ψ(0)/ψ<sub>0</sub>) / ζ.</li>
+        <li>L'ensemble des points à la distance r<sub>0</sub> du noyau est une <strong>sphère</strong> ; sa trace dans le plan (x, z) est un <strong>cercle</strong>.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Paramètres</h2>
+
+    <div class="param-group">
+      <label>Taille 1s (exposant ζ)</label>
+      <div class="slider-row">
+        <input type="range" id="sliderZeta" min="0.5" max="4.0" step="0.05" value="1.0">
+        <span class="val" id="valZeta">1.00</span>
+      </div>
+    </div>
+
+    <div class="param-group">
+      <label>Isovaleur ψ<sub>0</sub> (échelle log)</label>
+      <div class="slider-row">
+        <input type="range" id="sliderIso" min="-4" max="0" step="0.01" value="-1.3">
+        <span class="val wide" id="valIso">5.01e-2</span>
+      </div>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="chkLog">
+      Axe ψ logarithmique (coupe)
+    </label>
+
+    <div class="results">
+      <h2>Contour</h2>
+      <div class="result-row">
+        <span class="label">ψ(0)</span>
+        <span class="value" id="resPsi0">0.000</span>
+      </div>
+      <div class="result-row">
+        <span class="label">Isovaleur ψ<sub>0</sub></span>
+        <span class="value pos" id="resIso">0.000</span>
+      </div>
+      <div class="result-row" style="margin-top:0.4em; padding-top:0.5em; border-top:2px solid var(--rule);">
+        <span class="label"><strong>Rayon r<sub>0</sub></strong></span>
+        <span class="value total" id="resR">0.000</span>
+      </div>
+      <div class="result-row">
+        <span class="label">P(r &lt; r<sub>0</sub>)</span>
+        <span class="value" id="resP">0.0 %</span>
+      </div>
+      <div class="bar-container">
+        <div class="bar-fill" id="barP" style="width:0"></div>
+      </div>
+      <div class="bar-caption">Probabilité de présence dans la sphère</div>
+    </div>
+
+    <div class="warning" id="warning"></div>
+
+    <button class="reset" id="btnReset">Réinitialiser</button>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(100,160,60,0.15); border-color:rgba(100,160,60,0.4)"></div>
+        <span>Région ψ ≥ ψ<sub>0</sub></span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top:2px solid rgba(60,120,40,0.85)"></div>
+        <span>ψ(z) le long de l'axe</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top:2px dashed rgba(184,67,47,0.85)"></div>
+        <span>Isovaleur ψ<sub>0</sub></span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="border-top:2px dashed rgba(42,93,143,0.6)"></div>
+        <span>Report du rayon r<sub>0</sub></span>
+      </div>
+    </div>
+
+    <a href="index.html" class="back">← Retour à l'introduction</a>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* =============================================================
+   PARAMÈTRES GLOBAUX — facilement modifiables
+   ============================================================= */
+const CONFIG = {
+  // Mapping horizontal commun aux deux canvas (axe z)
+  canvasW: 720,
+  worldZmin: -6.0,
+  worldZmax:  6.0,
+
+  // Canvas 2D (plan x, z) — même échelle en x et en z
+  canvas2dH: 420,
+
+  // Canvas de la coupe ψ(z)
+  canvasProfH: 280,
+  profPadTop: 18,
+  profPadBottom: 26,
+
+  // Axe ψ logarithmique : bornes en log10
+  logMin: -5,
+  logMax: 1,
+
+  // Valeurs par défaut
+  defaultZeta: 1.00,
+  defaultLogIso: -1.3,
+
+  // Échantillonnage de la courbe
+  nCurve: 600,
+
+  atomRadius: 5,
+};
+
+/* =============================================================
+   ÉTAT
+   ============================================================= */
+let state = {
+  zeta: CONFIG.defaultZeta,
+  logIso: CONFIG.defaultLogIso,
+  logAxis: false,
+};
+
+/* =============================================================
+   ÉLÉMENTS DOM
+   ============================================================= */
+const cvs2d = document.getElementById("cvs2d");
+const ctx2d = cvs2d.getContext("2d");
+const cvsProf = document.getElementById("cvsProf");
+const ctxProf = cvsProf.getContext("2d");
+const sliderZeta = document.getElementById("sliderZeta");
+const sliderIso = document.getElementById("sliderIso");
+const chkLog = document.getElementById("chkLog");
+const valZeta = document.getElementById("valZeta");
+const valIso = document.getElementById("valIso");
+const resPsi0 = document.getElementById("resPsi0");
+const resIso = document.getElementById("resIso");
+const resR = document.getElementById("resR");
+const resP = document.getElementById("resP");
+const barP = document.getElementById("barP");
+const warningEl = document.getElementById("warning");
+const btnReset = document.getElementById("btnReset");
+
+/* =============================================================
+   FONCTION D'ONDE 1s NORMALISÉE ET GRANDEURS DÉRIVÉES
+   ============================================================= */
+function norm1s(zeta) {
+  return Math.sqrt(zeta * zeta * zeta / Math.PI);
+}
+
+function psi1s(r, zeta) {
+  return norm1s(zeta) * Math.exp(-zeta * r);
+}
+
+/** Rayon r0 tel que ψ(r0) = iso ; null si iso > ψ(0) */
+function isoRadius(iso, zeta) {
+  const psi0 = norm1s(zeta);
+  if (iso > psi0) return null;
+  return Math.log(psi0 / iso) / zeta;
+}
+
+/** Probabilité de présence dans la sphère de rayon R (1s, 3D) */
+function probInside(R, zeta) {
+  const x = zeta * R;
+  return 1 - Math.exp(-2 * x) * (1 + 2 * x + 2 * x * x);
+}
+
+function fmtSci(v) {
+  const [m, e] = v.toExponential(2).split("e");
+  return m + "e" + (e[0] === "+" ? e.slice(1) : e);
+}
+
+/* =============================================================
+   CONVERSIONS MONDE <-> CANVAS
+   ============================================================= */
+const pxPerUnit = CONFIG.canvasW / (CONFIG.worldZmax - CONFIG.worldZmin);
+
+function zToPx(z) {
+  return (z - CONFIG.worldZmin) * pxPerUnit;
+}
+
+// Canvas 2D : x du monde vertical, centré, même échelle que z
+function xToPx2d(x) {
+  return CONFIG.canvas2dH / 2 - x * pxPerUnit;
+}
+
+// Canvas coupe : ψ -> pixel vertical
+function psiToPxProf(psi, yMax) {
+  const top = CONFIG.profPadTop;
+  const bottom = CONFIG.canvasProfH - CONFIG.profPadBottom;
+  let t;
+  if (state.logAxis) {
+    const l = Math.log10(Math.max(psi, Math.pow(10, CONFIG.logMin - 1)));
+    t = (l - CONFIG.logMin) / (CONFIG.logMax - CONFIG.logMin);
+  } else {
+    t = psi / yMax;
+  }
+  return bottom - t * (bottom - top);
+}
+
+function niceStep(range, nTicks) {
+  const raw = range / nTicks;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const m = raw / p;
+  return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+}
+
+/* =============================================================
+   DESSIN — ÉLÉMENTS COMMUNS
+   ============================================================= */
+function drawVerticalGrid(ctx, H) {
+  ctx.strokeStyle = "rgba(0,0,0,0.04)";
+  ctx.lineWidth = 1;
+  for (let z = Math.ceil(CONFIG.worldZmin); z <= Math.floor(CONFIG.worldZmax); z++) {
+    const cx = zToPx(z);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  }
+}
+
+function drawRadiusMarkers(ctx, r0, yTop, yBottom) {
+  if (r0 === null) return;
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = "rgba(42, 93, 143, 0.6)";
+  ctx.lineWidth = 1.2;
+  for (const s of [-1, 1]) {
+    const cx = zToPx(s * r0);
+    if (cx < 0 || cx > CONFIG.canvasW) continue;
+    ctx.beginPath(); ctx.moveTo(cx, yTop); ctx.lineTo(cx, yBottom); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* =============================================================
+   DESSIN — PLAN (x, z)
+   ============================================================= */
+function draw2d(r0) {
+  const ctx = ctx2d;
+  const W = CONFIG.canvasW;
+  const H = CONFIG.canvas2dH;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fffef9";
+  ctx.fillRect(0, 0, W, H);
+
+  // Grille subtile
+  drawVerticalGrid(ctx, H);
+  ctx.strokeStyle = "rgba(0,0,0,0.04)";
+  const xHalf = H / 2 / pxPerUnit;
+  for (let x = Math.ceil(-xHalf); x <= Math.floor(xHalf); x++) {
+    const cy = xToPx2d(x);
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  }
+
+  // Axes
+  const ox = zToPx(0);
+  const oy = xToPx2d(0);
+  ctx.strokeStyle = "rgba(0,0,0,0.3)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke();
+
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("z", W - 18, oy - 8);
+  ctx.fillText("x", ox + 8, 16);
+
+  // Report du rayon vers la coupe
+  drawRadiusMarkers(ctx, r0, oy, H);
+
+  if (r0 !== null) {
+    const rPx = r0 * pxPerUnit;
+
+    // Contour d'isovaleur (cercle)
+    ctx.beginPath();
+    ctx.arc(ox, oy, rPx, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(100, 160, 60, 0.12)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(100, 160, 60, 0.6)";
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // Rayon r0 (flèche à 45°)
+    const ang = -Math.PI / 4;
+    const ex = ox + rPx * Math.cos(ang);
+    const ey = oy + rPx * Math.sin(ang);
+    ctx.strokeStyle = "rgba(42, 93, 143, 0.85)";
+    ctx.fillStyle = "rgba(42, 93, 143, 0.85)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ex, ey); ctx.stroke();
+    if (rPx > 12) {
+      const ah = 8;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - ah * Math.cos(ang - 0.4), ey - ah * Math.sin(ang - 0.4));
+      ctx.lineTo(ex - ah * Math.cos(ang + 0.4), ey - ah * Math.sin(ang + 0.4));
+      ctx.closePath();
+      ctx.fill();
+    }
+    const mx = ox + 0.5 * Math.min(rPx, H / 2 * 1.3) * Math.cos(ang);
+    const my = oy + 0.5 * Math.min(rPx, H / 2 * 1.3) * Math.sin(ang);
+    ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = "left";
+    ctx.fillText("r₀ = " + r0.toFixed(2), mx + 8, my - 2);
+
+    // Étiquette 1s
+    if (oy + rPx + 16 < H) {
+      ctx.fillStyle = "rgba(60, 120, 40, 0.8)";
+      ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.fillText("1s", ox - rPx * 0.7071 - 12, oy + rPx * 0.7071 + 14);
+    }
+  } else {
+    ctx.fillStyle = "rgba(184, 67, 47, 0.85)";
+    ctx.font = "italic 15px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.fillText("ψ₀ > ψ(0) : aucun point n'atteint cette isovaleur", W / 2, 40);
+  }
+
+  // Noyau
+  ctx.beginPath();
+  ctx.arc(ox, oy, CONFIG.atomRadius, 0, 2 * Math.PI);
+  ctx.fillStyle = "#222";
+  ctx.fill();
+  ctx.fillStyle = "#333";
+  ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("A", ox + 10, oy + 16);
+}
+
+/* =============================================================
+   DESSIN — COUPE ψ(z)
+   ============================================================= */
+function drawProfile(r0, iso) {
+  const ctx = ctxProf;
+  const W = CONFIG.canvasW;
+  const H = CONFIG.canvasProfH;
+  const { zeta } = state;
+  const psi0 = norm1s(zeta);
+  const top = CONFIG.profPadTop;
+  const bottom = H - CONFIG.profPadBottom;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fffef9";
+  ctx.fillRect(0, 0, W, H);
+
+  drawVerticalGrid(ctx, bottom);
+
+  // Échelle verticale
+  let yMax = 1;
+  const ox = zToPx(0);
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.textAlign = "left";
+  if (state.logAxis) {
+    for (let l = CONFIG.logMin; l <= CONFIG.logMax; l++) {
+      const cy = psiToPxProf(Math.pow(10, l), 1);
+      ctx.strokeStyle = "rgba(0,0,0,0.04)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillText("1e" + l, ox + 6, cy - 3);
+    }
+  } else {
+    const step = niceStep(psi0 * 1.15, 4);
+    yMax = Math.ceil(psi0 * 1.15 / step) * step;
+    for (let v = step; v <= yMax + 1e-9; v += step) {
+      const cy = psiToPxProf(v, yMax);
+      ctx.strokeStyle = "rgba(0,0,0,0.04)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+      ctx.fillStyle = "rgba(0,0,0,0.4)";
+      ctx.fillText(+v.toPrecision(3) + "", ox + 6, cy - 3);
+    }
+  }
+
+  // Axes
+  ctx.strokeStyle = "rgba(0,0,0,0.3)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, bottom); ctx.lineTo(W, bottom); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, top - 10); ctx.lineTo(ox, bottom); ctx.stroke();
+
+  // Graduations z
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.font = "12px 'Courier New', monospace";
+  ctx.textAlign = "center";
+  for (let z = Math.ceil(CONFIG.worldZmin); z <= Math.floor(CONFIG.worldZmax); z++) {
+    if (z === 0 || z === CONFIG.worldZmin || z === CONFIG.worldZmax) continue;
+    const cx = zToPx(z);
+    ctx.beginPath(); ctx.moveTo(cx, bottom); ctx.lineTo(cx, bottom + 4);
+    ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillText(z, cx, bottom + 17);
+  }
+  ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("z", W - 14, bottom - 6);
+  ctx.fillText("ψ", ox - 16, top);
+
+  // Zone ψ ≥ ψ0 sous la courbe
+  const n = CONFIG.nCurve;
+  if (r0 !== null) {
+    const za = Math.max(-r0, CONFIG.worldZmin);
+    const zb = Math.min(r0, CONFIG.worldZmax);
+    const yIso = psiToPxProf(iso, yMax);
+    ctx.beginPath();
+    ctx.moveTo(zToPx(za), Math.min(bottom, yIso));
+    for (let i = 0; i <= n; i++) {
+      const z = za + (zb - za) * i / n;
+      ctx.lineTo(zToPx(z), psiToPxProf(psi1s(Math.abs(z), zeta), yMax));
+    }
+    ctx.lineTo(zToPx(zb), Math.min(bottom, yIso));
+    ctx.closePath();
+    ctx.fillStyle = "rgba(100, 160, 60, 0.15)";
+    ctx.fill();
+  }
+
+  // Courbe ψ(z)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, bottom);
+  ctx.clip();
+  ctx.beginPath();
+  for (let i = 0; i <= n; i++) {
+    const z = CONFIG.worldZmin + (CONFIG.worldZmax - CONFIG.worldZmin) * i / n;
+    const cx = zToPx(z);
+    const cy = psiToPxProf(psi1s(Math.abs(z), zeta), yMax);
+    if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+  }
+  ctx.strokeStyle = "rgba(60, 120, 40, 0.85)";
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  ctx.restore();
+
+  // Report du rayon
+  drawRadiusMarkers(ctx, r0, 0, bottom);
+
+  // Ligne d'isovaleur
+  const yIso = psiToPxProf(iso, yMax);
+  if (yIso >= top - 10 && yIso <= bottom) {
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = "rgba(184, 67, 47, 0.85)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, yIso); ctx.lineTo(W, yIso); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = "rgba(184, 67, 47, 0.9)";
+    ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = "right";
+    ctx.fillText("ψ₀", W - 8, yIso - 5);
+  } else if (yIso > bottom) {
+    ctx.fillStyle = "rgba(184, 67, 47, 0.9)";
+    ctx.font = "italic 12px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = "right";
+    ctx.fillText("ψ₀ trop petite pour être visible : passer en échelle log ↓", W - 8, bottom - 8);
+  }
+
+  // Points d'intersection
+  if (r0 !== null) {
+    for (const s of [-1, 1]) {
+      const cx = zToPx(s * r0);
+      if (cx < 0 || cx > W || yIso > bottom) continue;
+      ctx.beginPath();
+      ctx.arc(cx, yIso, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = "#b8432f";
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  }
+}
+
+/* =============================================================
+   MISE À JOUR COMPLÈTE
+   ============================================================= */
+function update() {
+  const { zeta, logIso } = state;
+  const iso = Math.pow(10, logIso);
+  const psi0 = norm1s(zeta);
+  const r0 = isoRadius(iso, zeta);
+
+  draw2d(r0);
+  drawProfile(r0, iso);
+
+  resPsi0.textContent = psi0.toFixed(3);
+  resIso.textContent = fmtSci(iso);
+
+  if (r0 === null) {
+    resR.textContent = "—";
+    resP.textContent = "0.0 %";
+    barP.style.width = "0%";
+    warningEl.textContent = "L'isovaleur dépasse le maximum ψ(0) : pas de contour.";
+  } else {
+    const P = probInside(r0, zeta);
+    resR.textContent = r0.toFixed(3);
+    resP.textContent = (100 * P).toFixed(1) + " %";
+    barP.style.width = (100 * P) + "%";
+    warningEl.textContent = r0 > CONFIG.worldZmax
+      ? "Le contour sort du cadre (r₀ > " + CONFIG.worldZmax + ")."
+      : "";
+  }
+}
+
+/* =============================================================
+   SLIDERS ET OPTIONS
+   ============================================================= */
+sliderZeta.addEventListener("input", () => {
+  state.zeta = parseFloat(sliderZeta.value);
+  valZeta.textContent = state.zeta.toFixed(2);
+  update();
+});
+
+sliderIso.addEventListener("input", () => {
+  state.logIso = parseFloat(sliderIso.value);
+  valIso.textContent = fmtSci(Math.pow(10, state.logIso));
+  update();
+});
+
+chkLog.addEventListener("change", () => {
+  state.logAxis = chkLog.checked;
+  update();
+});
+
+/* =============================================================
+   RESET
+   ============================================================= */
+btnReset.addEventListener("click", () => {
+  state.zeta = CONFIG.defaultZeta;
+  state.logIso = CONFIG.defaultLogIso;
+  state.logAxis = false;
+  sliderZeta.value = CONFIG.defaultZeta;
+  sliderIso.value = CONFIG.defaultLogIso;
+  chkLog.checked = false;
+  valZeta.textContent = CONFIG.defaultZeta.toFixed(2);
+  valIso.textContent = fmtSci(Math.pow(10, CONFIG.defaultLogIso));
+  update();
+});
+
+/* =============================================================
+   INITIALISATION
+   ============================================================= */
+update();
+
+</script>
+</body>
+</html>

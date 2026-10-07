@@ -13,6 +13,9 @@
       <item identifier="ITEM-INTRO" identifierref="RES-INTRO" isvisible="true">
         <title>Introduction</title>
       </item>
+      <item identifier="ITEM-TRACE-S" identifierref="RES-TRACE-S" isvisible="true">
+        <title>Tracé d'une orbitale s</title>
+      </item>
       <item identifier="ITEM-ACTIVITY" identifierref="RES-ACTIVITY" isvisible="true">
         <title>Activité interactive</title>
       </item>
@@ -21,6 +24,9 @@
   <resources>
     <resource identifier="RES-INTRO" type="webcontent" href="index.html">
       <file href="index.html"/>
+    </resource>
+    <resource identifier="RES-TRACE-S" type="webcontent" href="activite_trace_s.html">
+      <file href="activite_trace_s.html"/>
     </resource>
     <resource identifier="RES-ACTIVITY" type="webcontent" href="activity.html">
       <file href="activity.html"/>
