@@ -1,38 +1,30 @@
-# Paquet IMS Content pour Moodle (AMeTICE)
+# Archives IMS Content pour Moodle (AMeTICE)
 #
-#   make          construit l'archive (après vérification)
-#   make check    vérifie que tous les fichiers du manifeste existent
-#   make list     affiche le contenu de l'archive
-#   make clean    supprime l'archive
+#   make                construit les quatre archives
+#   make trace          atomistique_trace.zip        (tracés s et p)
+#   make recouvrement   atomistique_recouvrement.zip (recouvrements s–p et p–p)
+#   make om             atomistique_om.zip           (diagrammes d'OM)
+#   make tout           activites_atomistique.zip    (intégralité)
+#   make list           affiche le contenu des archives
+#   make clean          supprime les archives et le dossier build/
 #
-# La liste des fichiers est lue dans imsmanifest.xml (balises <file href="...">) :
-# pour ajouter une activité, il suffit de la déclarer dans le manifeste.
+# La répartition des activités et du cours entre archives est définie dans
+# build.py (table ARCHIVES) et par les attributs data-archives de index.html.
 
-ARCHIVE  ?= activites_atomistique.zip
-MANIFEST := imsmanifest.xml
-FILES    := $(MANIFEST) $(shell sed -n 's/.*<file href="\([^"]*\)".*/\1/p' $(MANIFEST))
+PYTHON   ?= python3
+ARCHIVES := trace recouvrement om tout
+ZIPS     := atomistique_trace.zip atomistique_recouvrement.zip atomistique_om.zip activites_atomistique.zip
 
-.PHONY: all check list clean
+.PHONY: all $(ARCHIVES) list clean
 
-all: $(ARCHIVE)
+all:
+	$(PYTHON) build.py
 
-# imsmanifest.xml doit être à la racine de l'archive (pas de dossier parent)
-$(ARCHIVE): $(FILES) | check
-	rm -f $@
-	zip -X -9 $@ $(FILES)
-	@echo "Archive prête : $@ ($(words $(FILES)) fichiers)"
+$(ARCHIVES):
+	$(PYTHON) build.py $@
 
-check:
-	@missing=0; \
-	for f in $(FILES); do \
-	  [ -f "$$f" ] || { echo "Fichier manquant : $$f"; missing=1; }; \
-	done; \
-	python3 -c "import xml.dom.minidom as m; m.parse('$(MANIFEST)')" \
-	  || { echo "$(MANIFEST) n'est pas un XML valide"; missing=1; }; \
-	[ $$missing -eq 0 ] && echo "Manifeste OK : $(words $(FILES)) fichiers"
-
-list: $(ARCHIVE)
-	unzip -l $(ARCHIVE)
+list:
+	@for z in $(ZIPS); do [ -f $$z ] && unzip -l $$z; done; true
 
 clean:
-	rm -f $(ARCHIVE)
+	rm -rf build $(ZIPS)

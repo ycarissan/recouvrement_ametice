@@ -1,2 +1,7 @@
-# Archive générée par « make » (paquet IMS Content pour Moodle)
+# Générés par « make » (build.py) : dossiers de travail et archives IMS Content pour Moodle
+build/
+__pycache__/
+atomistique_trace.zip
+atomistique_recouvrement.zip
+atomistique_om.zip
 activites_atomistique.zip

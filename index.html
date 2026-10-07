@@ -94,6 +94,16 @@ p { margin: 0.7em 0; text-align: justify; }
 }
 ul { margin: 0.5em 0 0.5em 1.5em; }
 li { margin: 0.3em 0; }
+
+/* Activités numérotées automatiquement (la numérotation suit les activités présentes) */
+.page { counter-reset: activite; }
+.activite { counter-increment: activite; }
+.activite + .activite { margin-top: 2em; }
+.activite > p > strong:first-child::before { content: counter(activite) ". "; }
+
+/* archives:debut — prévisualisation de la version complète ; retiré par build.py */
+[data-archives]:not([data-archives~="tout"]) { display: none; }
+/* archives:fin */
 </style>
 </head>
 <body>
@@ -101,9 +111,18 @@ li { margin: 0.3em 0; }
 
 <header>
   <div class="chapter">Chimie quantique — M1 Chimie Théorique</div>
-  <h1>Représenter les orbitales atomiques et visualiser leur recouvrement</h1>
+  <h1 data-archives="trace">Représenter les orbitales atomiques s et p</h1>
+  <h1 data-archives="recouvrement">Visualiser le recouvrement entre orbitales atomiques</h1>
+  <h1 data-archives="om">Construire des diagrammes d'orbitales moléculaires</h1>
+  <h1 data-archives="tout">Représenter les orbitales atomiques et visualiser leur recouvrement</h1>
 </header>
 
+<section data-archives="trace">
+<h2>Contexte</h2>
+<p>Une orbitale atomique est une fonction d'onde ψ(r) : elle associe une valeur, positive ou négative, à chaque point de l'espace. Les représentations des orbitales que l'on trouve dans les livres (sphères, lobes) ne sont donc pas les orbitales elles-mêmes, mais des surfaces construites à partir de ces fonctions. Les activités qui suivent expliquent comment ces dessins sont obtenus.</p>
+</section>
+
+<section data-archives="recouvrement om tout">
 <h2>Contexte</h2>
 <p>L'intégrale de recouvrement entre deux orbitales atomiques est une grandeur fondamentale en chimie quantique. Elle mesure le degré d'interpénétration spatiale de deux fonctions d'onde et joue un rôle central dans la construction des orbitales moléculaires par la méthode LCAO.</p>
 
@@ -114,7 +133,9 @@ S<sub>AB</sub> = ∫ ψ<sub>A</sub>(r) · ψ<sub>B</sub>(r) d<sup>3</sup>r
 </div>
 
 <p>Le signe du produit ψ<sub>A</sub>·ψ<sub>B</sub> varie d'un point à l'autre : S<sub>AB</sub> résulte de la compétition entre les zones où les deux fonctions ont le même signe (contribution positive) et celles où elles sont de signes opposés (contribution négative).</p>
+</section>
 
+<section data-archives="trace recouvrement tout">
 <h2>Représenter une orbitale : les contours d'isovaleur</h2>
 <p>Une orbitale est une fonction des trois coordonnées de l'espace ; on ne peut pas la « dessiner » directement. On choisit une valeur ψ<sub>0</sub>, appelée <strong>isovaleur</strong>, et on trace la surface sur laquelle |ψ| = ψ<sub>0</sub>. Dans un plan, cette surface apparaît comme un contour.</p>
 
@@ -124,7 +145,9 @@ S<sub>AB</sub> = ∫ ψ<sub>A</sub>(r) · ψ<sub>B</sub>(r) d<sup>3</sup>r
 </ul>
 
 <p>La taille apparente d'une orbitale dépend donc de l'isovaleur choisie : c'est une convention de représentation, pas une propriété de l'orbitale.</p>
+</section>
 
+<section data-archives="recouvrement tout">
 <h2>Le cas s–p</h2>
 <p>Le recouvrement entre une orbitale 1s (sphérique) et une orbitale 2p (bilobée, avec un plan nodal) dépend de la position de la 1s par rapport à l'axe de la 2p :</p>
 
@@ -133,7 +156,9 @@ S<sub>AB</sub> = ∫ ψ<sub>A</sub>(r) · ψ<sub>B</sub>(r) d<sup>3</sup>r
   <li>Lorsque la 1s se trouve <strong>dans le plan nodal</strong> de la 2p, elle recouvre autant le lobe positif que le lobe négatif : les deux contributions se compensent et le recouvrement est <strong>nul par symétrie</strong>.</li>
   <li>Dans les positions intermédiaires, le recouvrement prend des valeurs intermédiaires dont le signe dépend du lobe le plus recouvert.</li>
 </ul>
+</section>
 
+<section data-archives="recouvrement om tout">
 <h2>Le cas p–p</h2>
 <p>Avec deux orbitales p, le recouvrement dépend à la fois de la position de B et de l'<strong>orientation</strong> de son axe :</p>
 
@@ -151,45 +176,69 @@ S = (<b>u</b>·<b>d</b>)(<b>v</b>·<b>d</b>) S<sub>σ</sub> + [<b>u</b>·<b>v</b
 </div>
 
 <p>Par exemple, si B est sur l'axe de A et tourné d'un angle φ, on a S = S<sub>σ</sub> cos φ.</p>
+</section>
 
-<div class="note">
-<strong>Objectifs pédagogiques :</strong> comprendre ce que représente le contour dessiné pour une orbitale s ou p, puis déplacer (et tourner) une orbitale autour d'une orbitale fixe pour observer en temps réel les zones où le produit ψ<sub>A</sub>·ψ<sub>B</sub> est positif ou négatif, ainsi que la valeur de l'intégrale de recouvrement normalisée.
+<div class="note" data-archives="trace">
+<strong>Objectifs pédagogiques :</strong> comprendre ce que représente le contour dessiné pour une orbitale s ou p, et relier ce contour à la valeur de la fonction d'onde, à l'exposant ζ et à l'isovaleur choisie.
+</div>
+<div class="note" data-archives="recouvrement">
+<strong>Objectifs pédagogiques :</strong> déplacer (et tourner) une orbitale autour d'une orbitale fixe pour observer en temps réel les zones où le produit ψ<sub>A</sub>·ψ<sub>B</sub> est positif ou négatif, ainsi que la valeur de l'intégrale de recouvrement normalisée ; identifier les recouvrements σ, π et nuls par symétrie.
+</div>
+<div class="note" data-archives="om">
+<strong>Objectifs pédagogiques :</strong> construire le diagramme d'orbitales moléculaires d'une molécule diatomique, relier l'écart entre OM liantes et antiliantes au recouvrement et à l'écart d'énergie entre OA, puis en déduire le remplissage électronique, l'indice de liaison et la polarité de la liaison.
+</div>
+<div class="note" data-archives="tout">
+<strong>Objectifs pédagogiques :</strong> comprendre ce que représente le contour dessiné pour une orbitale s ou p, puis déplacer (et tourner) une orbitale autour d'une orbitale fixe pour observer en temps réel les zones où le produit ψ<sub>A</sub>·ψ<sub>B</sub> est positif ou négatif, ainsi que la valeur de l'intégrale de recouvrement normalisée, et enfin construire des diagrammes d'orbitales moléculaires.
 </div>
 
 <h2>Modèle utilisé</h2>
-<p>Les activités de <strong>tracé</strong> utilisent les orbitales de Slater normalisées en 3D :</p>
+<section data-archives="trace recouvrement tout">
+<p>Les orbitales sont des orbitales de Slater :</p>
 
 <div class="formula">
 ψ<sub>1s</sub> = (ζ<sup>3</sup>/π)<sup>1/2</sup> e<sup>−ζr</sup> &nbsp;&nbsp;&nbsp; ψ<sub>2p<sub>z</sub></sub> = (ζ<sup>5</sup>/π)<sup>1/2</sup> z e<sup>−ζr</sup>
 </div>
+</section>
 
-<p>Les activités de <strong>recouvrement</strong> utilisent des fonctions de même forme, mais restreintes au plan (x, z). L'intégrale de recouvrement y est calculée par intégration numérique 2D, puis normalisée pour que S ∈ [−1, +1]. Les valeurs obtenues reproduisent correctement les tendances (signes, symétries, effet de la distance et de l'orientation), mais ce ne sont pas les valeurs numériques exactes du recouvrement en 3D.</p>
+<p data-archives="trace tout">Les activités de <strong>tracé</strong> utilisent directement ces fonctions, normalisées en 3D.</p>
 
-<p>Les tailles des orbitales (exposants de Slater ζ) sont ajustables par des curseurs : plus ζ est grand, plus l'orbitale est contractée autour de son noyau.</p>
+<p data-archives="recouvrement tout">Les activités de <strong>recouvrement</strong> utilisent des fonctions de même forme, mais restreintes au plan (x, z). L'intégrale de recouvrement y est calculée par intégration numérique 2D, puis normalisée pour que S ∈ [−1, +1]. Les valeurs obtenues reproduisent correctement les tendances (signes, symétries, effet de la distance et de l'orientation), mais ce ne sont pas les valeurs numériques exactes du recouvrement en 3D.</p>
 
-<p>L'activité sur les <strong>diagrammes d'OM</strong> utilise la méthode de Hückel étendue : les recouvrements S<sub>ij</sub> sont calculés en 3D avec les orbitales de Slater, les termes d'interaction valent H<sub>ij</sub> = K S<sub>ij</sub> (α<sub>i</sub> + α<sub>j</sub>)/2 avec K = 1.75, et les énergies des OM sont les solutions de HC = SCE. Ce modèle ne contient pas la répulsion entre noyaux : il décrit bien l'ordre et la nature des OM, mais pas la distance d'équilibre.</p>
+<p data-archives="trace recouvrement tout">Les tailles des orbitales (exposants de Slater ζ) sont ajustables par des curseurs : plus ζ est grand, plus l'orbitale est contractée autour de son noyau.</p>
 
-<div class="note" id="avertissement-polarite">
+<p data-archives="om tout">L'activité sur les <strong>diagrammes d'OM</strong> utilise la méthode de Hückel étendue : les recouvrements S<sub>ij</sub> sont calculés en 3D avec les orbitales de Slater, les termes d'interaction valent H<sub>ij</sub> = K S<sub>ij</sub> (α<sub>i</sub> + α<sub>j</sub>)/2 avec K = 1.75, et les énergies des OM sont les solutions de HC = SCE. Ce modèle ne contient pas la répulsion entre noyaux : il décrit bien l'ordre et la nature des OM, mais pas la distance d'équilibre.</p>
+
+<div class="note" id="avertissement-polarite" data-archives="om tout">
 <strong>Attention — polarité et moment dipolaire.</strong> Dans l'activité sur les diagrammes d'OM, les charges partielles δ+ / δ− sont obtenues par une analyse de population de Mulliken : chaque OM occupée répartit ses électrons entre les deux atomes selon le poids des OA de chacun. La flèche verte représente le moment dipolaire de deux charges ponctuelles placées sur les noyaux (convention IUPAC : de δ− vers δ+) ; elle n'est pas tracée pour une espèce chargée. Ce modèle ne tient pas compte de la forme du nuage électronique (paires libres, hybridation) et surestime nettement les charges : il est fiable qualitativement pour des cas simples comme HF ou LiH, mais peut se tromper. Par exemple, il prévoit pour CO une polarité C<sup>δ+</sup>O<sup>δ−</sup> marquée, alors que le moment dipolaire réel de CO est très faible (0,11 D) et orienté avec l'extrémité négative sur le carbone.
 <br><br>
 C'est pourquoi, pour les molécules formées d'éléments réels, la polarité (δ+ / δ− et flèche) n'est représentée que si le modèle reproduit le moment dipolaire expérimental avec le bon sens et à un facteur 3 près, à la distance initiale (longueur de liaison expérimentale) : c'est le cas de LiH, LiF, HF, OH, NH et CH. Elle est masquée lorsque le modèle se trompe (BH, CO, NO, BF, CN, CF) ou lorsqu'il n'existe pas de valeur expérimentale de référence. En mode libre, elle est toujours représentée.
 </div>
 
 <h2>Activités</h2>
-<p><strong>1. Tracé d'une orbitale s.</strong> Avant d'étudier le recouvrement, comprendre ce que représente le contour dessiné pour une orbitale : on fait varier l'exposant ζ et l'isovaleur ψ<sub>0</sub>, et on relie le cercle obtenu dans le plan à la courbe radiale ψ(r).</p>
+<div class="activite" data-archives="trace tout">
+<p><strong>Tracé d'une orbitale s.</strong> Comprendre ce que représente le contour dessiné pour une orbitale : on fait varier l'exposant ζ et l'isovaleur ψ<sub>0</sub>, et on relie le cercle obtenu dans le plan à la courbe radiale ψ(r).</p>
 <a href="activite_trace_s.html" class="start-btn">Tracé d'une orbitale s →</a>
+</div>
 
-<p style="margin-top:2em;"><strong>2. Tracé d'une orbitale p.</strong> Même démarche pour une orbitale 2p<sub>z</sub> orientée le long de l'axe horizontal : deux lobes de signes opposés, deux isovaleurs ±ψ<sub>0</sub>, et un contour qui coupe l'axe en deux points de chaque côté du noyau.</p>
+<div class="activite" data-archives="trace tout">
+<p><strong>Tracé d'une orbitale p.</strong> Même démarche pour une orbitale 2p<sub>z</sub> orientée le long de l'axe horizontal : deux lobes de signes opposés, deux isovaleurs ±ψ<sub>0</sub>, et un contour qui coupe l'axe en deux points de chaque côté du noyau.</p>
 <a href="activite_trace_p.html" class="start-btn">Tracé d'une orbitale p →</a>
+</div>
 
-<p style="margin-top:2em;"><strong>3. Recouvrement s–p.</strong> Déplacer une orbitale 1s autour d'une orbitale 2p<sub>x</sub> fixe et suivre l'intégrale de recouvrement : rechercher les positions de recouvrement σ maximal et celles de recouvrement nul.</p>
+<div class="activite" data-archives="recouvrement tout">
+<p><strong>Recouvrement s–p.</strong> Déplacer une orbitale 1s autour d'une orbitale 2p<sub>x</sub> fixe et suivre l'intégrale de recouvrement : rechercher les positions de recouvrement σ maximal et celles de recouvrement nul.</p>
 <a href="activite_recouvrement_sp.html" class="start-btn">Recouvrement s–p →</a>
+</div>
 
-<p style="margin-top:2em;"><strong>4. Recouvrement p–p.</strong> Une orbitale 2p est fixe le long de l'axe z ; la seconde peut être déplacée et tournée de 0 à 360° dans le plan. Identifier les configurations σ et π, comparer leurs valeurs à distance égale, et repérer les situations de recouvrement nul par symétrie.</p>
+<div class="activite" data-archives="recouvrement tout">
+<p><strong>Recouvrement p–p.</strong> Une orbitale 2p est fixe le long de l'axe z ; la seconde peut être déplacée et tournée de 0 à 360° dans le plan. Identifier les configurations σ et π, comparer leurs valeurs à distance égale, et repérer les situations de recouvrement nul par symétrie.</p>
 <a href="activite_recouvrement_pp.html" class="start-btn">Recouvrement p–p →</a>
+</div>
 
-<p style="margin-top:2em;"><strong>5. Diagrammes d'orbitales moléculaires.</strong> Construire le diagramme d'OM d'une molécule diatomique (H<sub>2</sub>, He<sub>2</sub>, N<sub>2</sub>, O<sub>2</sub>, CO, HF…) : choisir les atomes et leur nombre d'électrons, puis faire varier la distance en faisant glisser les axes d'énergie. Observer comment le recouvrement fixe l'écart entre OM liantes et antiliantes, le remplissage électronique et l'indice de liaison. En <strong>mode libre</strong>, deux atomes fictifs A et B (de la taille du carbone) permettent de régler directement l'énergie de leurs orbitales s et p, en faisant glisser les cases quantiques, pour étudier l'effet de l'écart d'énergie entre OA sur les OM.</p>
+<div class="activite" data-archives="om tout">
+<p><strong>Diagrammes d'orbitales moléculaires.</strong> Construire le diagramme d'OM d'une molécule diatomique (H<sub>2</sub>, He<sub>2</sub>, N<sub>2</sub>, O<sub>2</sub>, CO, HF…) : choisir les atomes et leur nombre d'électrons, puis faire varier la distance en faisant glisser les axes d'énergie. Observer comment le recouvrement fixe l'écart entre OM liantes et antiliantes, le remplissage électronique et l'indice de liaison. En <strong>mode libre</strong>, deux atomes fictifs A et B (de la taille du carbone) permettent de régler directement l'énergie de leurs orbitales s et p, en faisant glisser les cases quantiques, pour étudier l'effet de l'écart d'énergie entre OA sur les OM.</p>
 <a href="activite_diagramme_om.html" class="start-btn">Diagrammes d'OM →</a>
+</div>
 
 </div>
 </body>
