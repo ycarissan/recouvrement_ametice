@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visualisation du recouvrement s-p — Introduction</title>
+<style>
+@import url('data:text/css,');
+:root {
+  --ink: #1a1a2e;
+  --paper: #faf8f4;
+  --accent: #b8432f;
+  --accent2: #2a5d8f;
+  --rule: #c9bfab;
+  --muted: #7a7062;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.75;
+  min-height: 100vh;
+}
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3em 2em 4em;
+}
+header {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.6em;
+  margin-bottom: 2em;
+}
+header .chapter {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  margin-bottom: 0.3em;
+}
+h1 {
+  font-size: 1.9em;
+  font-weight: normal;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.25;
+}
+h2 {
+  font-size: 1.15em;
+  font-weight: bold;
+  color: var(--accent);
+  margin: 1.8em 0 0.6em;
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid var(--rule);
+}
+p { margin: 0.7em 0; text-align: justify; }
+.formula {
+  text-align: center;
+  font-size: 1.1em;
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  background: #f0ece4;
+  border-left: 3px solid var(--accent2);
+  font-family: "Cambria Math", "Times New Roman", serif;
+}
+.note {
+  background: #eef3f8;
+  border-left: 3px solid var(--accent2);
+  padding: 0.8em 1.2em;
+  margin: 1.2em 0;
+  font-size: 0.95em;
+}
+.start-btn {
+  display: inline-block;
+  margin-top: 2em;
+  padding: 0.8em 2.5em;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  font-size: 1.05em;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.start-btn:hover { background: #963727; }
+.fig-caption {
+  text-align: center;
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-top: 0.3em;
+}
+ul { margin: 0.5em 0 0.5em 1.5em; }
+li { margin: 0.3em 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="chapter">Chimie quantique — M1 Chimie Théorique</div>
+  <h1>Visualisation du recouvrement s–p</h1>
+</header>
+
+<h2>Contexte</h2>
+<p>L'intégrale de recouvrement entre deux orbitales atomiques est une grandeur fondamentale en chimie quantique. Elle mesure le degré d'interpénétration spatiale de deux fonctions d'onde et joue un rôle central dans la construction des orbitales moléculaires par la méthode LCAO.</p>
+
+<p>Pour deux orbitales atomiques ψ<sub>A</sub> et ψ<sub>B</sub> centrées sur deux noyaux distincts, l'intégrale de recouvrement est définie par :</p>
+
+<div class="formula">
+S<sub>AB</sub> = ∫ ψ<sub>A</sub>(r) · ψ<sub>B</sub>(r) d<sup>3</sup>r
+</div>
+
+<h2>Le cas s–p</h2>
+<p>Le recouvrement entre une orbitale 1s (sphérique) et une orbitale 2p<sub>x</sub> (bilobée, avec un plan nodal) présente un comportement riche et instructif :</p>
+
+<ul>
+  <li>Lorsque l'orbitale 1s approche <strong>le long de l'axe du lobe</strong> (axe x), le recouvrement est maximal en valeur absolue — c'est la situation de recouvrement de type <strong>π</strong>.</li>
+  <li>Lorsque la 1s approche <strong>perpendiculairement</strong> (le long de l'axe z), elle chevauche autant le lobe positif que le lobe négatif, et le recouvrement total est <strong>nul par symétrie</strong> — c'est la situation <strong>σ</strong> nulle.</li>
+  <li>Dans les positions intermédiaires, le recouvrement prend des valeurs intermédiaires dont le signe dépend de la position relative.</li>
+</ul>
+
+<div class="note">
+<strong>Objectif pédagogique :</strong> dans cette activité, vous allez déplacer librement une orbitale 1s autour d'une orbitale 2p<sub>x</sub> fixe et observer en temps réel les zones de recouvrement positif et négatif, ainsi que la valeur numérique de l'intégrale de recouvrement normalisée.
+</div>
+
+<h2>Modèle utilisé</h2>
+<p>Les orbitales sont représentées par des fonctions hydrogénoïdes simplifiées dans le plan (x, z). Le calcul du recouvrement est effectué par intégration numérique 2D sur la zone d'interpénétration des deux orbitales. La normalisation garantit que S ∈ [−1, +1].</p>
+
+<p>Les tailles des orbitales (paramètres de Slater effectifs) sont ajustables par des curseurs interactifs, permettant d'explorer l'effet de la taille relative des orbitales sur le recouvrement.</p>
+
+<a href="activity.html" class="start-btn">Lancer l'activité interactive →</a>
+
+</div>
+</body>
+</html>

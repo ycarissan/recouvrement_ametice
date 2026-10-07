@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recouvrement s–p — Activité interactive</title>
+<style>
+:root {
+  --ink: #1a1a2e;
+  --paper: #faf8f4;
+  --accent: #b8432f;
+  --accent2: #2a5d8f;
+  --rule: #c9bfab;
+  --muted: #7a7062;
+  --pos: rgba(200, 40, 30, 0.45);
+  --neg: rgba(30, 80, 180, 0.45);
+  --lobe-pos: rgba(200, 60, 40, 0.18);
+  --lobe-neg: rgba(40, 80, 180, 0.18);
+  --s-orb: rgba(100, 160, 60, 0.15);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1em;
+}
+header {
+  width: 100%;
+  max-width: 840px;
+  border-bottom: 2px solid var(--ink);
+  padding: 0.8em 0 0.5em;
+  margin-bottom: 1em;
+}
+header .chapter {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+header h1 {
+  font-size: 1.45em;
+  font-weight: normal;
+  font-style: italic;
+}
+.main-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2em;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+  align-items: flex-start;
+}
+.canvas-wrap {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  position: relative;
+}
+canvas {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+.panel {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  padding: 1.2em 1.4em;
+  min-width: 230px;
+  max-width: 260px;
+}
+.panel h2 {
+  font-size: 1em;
+  font-weight: bold;
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.3em;
+  margin-bottom: 0.8em;
+}
+.param-group { margin-bottom: 1.2em; }
+.param-group label {
+  display: block;
+  font-size: 0.88em;
+  color: var(--muted);
+  margin-bottom: 0.3em;
+}
+.param-group .slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.param-group input[type=range] {
+  flex: 1;
+  accent-color: var(--accent2);
+  height: 6px;
+}
+.param-group .val {
+  font-size: 0.88em;
+  font-weight: bold;
+  min-width: 2.5em;
+  text-align: right;
+  font-family: "Courier New", monospace;
+}
+.results { margin-top: 0.5em; }
+.results h2 { color: var(--accent2); }
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35em 0;
+  border-bottom: 1px dotted var(--rule);
+  font-size: 0.92em;
+}
+.result-row:last-child { border-bottom: none; }
+.result-row .label { color: var(--muted); }
+.result-row .value {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 1em;
+}
+.result-row .value.pos { color: var(--accent); }
+.result-row .value.neg { color: var(--accent2); }
+.result-row .value.total { color: var(--ink); font-size: 1.15em; }
+.bar-container {
+  margin-top: 0.8em;
+  background: #f0ece4;
+  height: 18px;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--rule);
+}
+.bar-fill {
+  height: 100%;
+  position: absolute;
+  top: 0;
+  transition: width 0.15s, left 0.15s;
+}
+.bar-fill.pos-bar { background: rgba(200,40,30,0.5); left: 50%; }
+.bar-fill.neg-bar { background: rgba(30,80,180,0.5); }
+.bar-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink);
+}
+.coords {
+  margin-top: 1em;
+  font-size: 0.82em;
+  color: var(--muted);
+  text-align: center;
+  font-family: "Courier New", monospace;
+}
+button.reset {
+  display: block;
+  width: 100%;
+  margin-top: 1.2em;
+  padding: 0.6em;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95em;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.2s;
+}
+button.reset:hover { background: #963727; }
+.legend {
+  margin-top: 1em;
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.25em 0;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+a.back {
+  display: inline-block;
+  margin-top: 1em;
+  font-size: 0.88em;
+  color: var(--accent2);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="chapter">Chimie quantique — Activité interactive</div>
+  <h1>Visualisation du recouvrement s–p</h1>
+</header>
+
+<div class="main-container">
+
+  <div class="canvas-wrap">
+    <canvas id="cvs" width="800" height="500"></canvas>
+  </div>
+
+  <div class="panel">
+    <h2>Paramètres</h2>
+
+    <div class="param-group">
+      <label>Taille 2p<sub>x</sub> (exposant ζ<sub>p</sub>)</label>
+      <div class="slider-row">
+        <input type="range" id="sliderZetaP" min="0.5" max="4.0" step="0.05" value="2.0">
+        <span class="val" id="valZetaP">2.00</span>
+      </div>
+    </div>
+
+    <div class="param-group">
+      <label>Taille 1s (exposant ζ<sub>s</sub>)</label>
+      <div class="slider-row">
+        <input type="range" id="sliderZetaS" min="0.5" max="4.0" step="0.05" value="3.0">
+        <span class="val" id="valZetaS">3.00</span>
+      </div>
+    </div>
+
+    <div class="results">
+      <h2>Recouvrement</h2>
+      <div class="result-row">
+        <span class="label">S⁺ (positif)</span>
+        <span class="value pos" id="resPos">0.000</span>
+      </div>
+      <div class="result-row">
+        <span class="label">S⁻ (négatif)</span>
+        <span class="value neg" id="resNeg">0.000</span>
+      </div>
+      <div class="result-row" style="margin-top:0.4em; padding-top:0.5em; border-top:2px solid var(--rule);">
+        <span class="label"><strong>S normalisé</strong></span>
+        <span class="value total" id="resTotal">0.000</span>
+      </div>
+      <div class="bar-container">
+        <div class="bar-center"></div>
+        <div class="bar-fill pos-bar" id="barPos" style="width:0"></div>
+        <div class="bar-fill neg-bar" id="barNeg" style="width:0; left:50%"></div>
+      </div>
+    </div>
+
+    <div class="coords" id="coords">B = (0.00, 4.00)</div>
+
+    <button class="reset" id="btnReset">Réinitialiser</button>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(200,40,30,0.45)"></div>
+        <span>Produit ψ<sub>A</sub>·ψ<sub>B</sub> &gt; 0</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(30,80,180,0.45)"></div>
+        <span>Produit ψ<sub>A</sub>·ψ<sub>B</sub> &lt; 0</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(200,60,40,0.18); border-color:rgba(200,60,40,0.4)"></div>
+        <span>Lobe 2p (+)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(40,80,180,0.18); border-color:rgba(40,80,180,0.4)"></div>
+        <span>Lobe 2p (−)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(100,160,60,0.15); border-color:rgba(100,160,60,0.4)"></div>
+        <span>Orbitale 1s</span>
+      </div>
+    </div>
+
+    <a href="index.html" class="back">← Retour à l'introduction</a>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* =============================================================
+   PARAMÈTRES GLOBAUX — facilement modifiables
+   ============================================================= */
+const CONFIG = {
+  // Canvas et mapping monde
+  canvasW: 800,
+  canvasH: 500,
+  worldXmin: -5.5,     // axe z (horizontal) — min
+  worldXmax:  5.5,     // axe z (horizontal) — max
+  worldYmin: -3.4,     // axe x (vertical, inversé pour écran) — min
+  worldYmax:  3.4,
+
+  // Position initiale de B
+  initBx: 2.5,    // z du monde
+  initBy: 0.0,    // x du monde (vers le haut = positif)
+
+  // Exposants de Slater par défaut
+  defaultZetaP: 2.00,
+  defaultZetaS: 3.00,
+
+  // Rayon de coupure pour la 1s (en multiples de 1/zetaS)
+  sCutoffMultiplier: 3.0,
+
+  // Résolution de la grille de calcul (pixels par point)
+  gridStep: 2,
+
+  // Affichage des orbitales
+  lobeContour: 0.01,    // seuil de contour pour dessiner les lobes 2p
+  sContour: 0.01,       // seuil pour le cercle 1s
+
+  // Seuil produit pour la coloration
+  productThreshold: 1e-4,
+
+  // Taille du point des atomes
+  atomRadius: 5,
+};
+
+/* =============================================================
+   ÉTAT
+   ============================================================= */
+let state = {
+  bx: CONFIG.initBx,
+  by: CONFIG.initBy,
+  zetaP: CONFIG.defaultZetaP,
+  zetaS: CONFIG.defaultZetaS,
+  dragging: false,
+};
+
+/* =============================================================
+   ÉLÉMENTS DOM
+   ============================================================= */
+const cvs = document.getElementById("cvs");
+const ctx = cvs.getContext("2d");
+const sliderZetaP = document.getElementById("sliderZetaP");
+const sliderZetaS = document.getElementById("sliderZetaS");
+const valZetaP = document.getElementById("valZetaP");
+const valZetaS = document.getElementById("valZetaS");
+const resPos = document.getElementById("resPos");
+const resNeg = document.getElementById("resNeg");
+const resTotal = document.getElementById("resTotal");
+const barPos = document.getElementById("barPos");
+const barNeg = document.getElementById("barNeg");
+const coordsEl = document.getElementById("coords");
+const btnReset = document.getElementById("btnReset");
+
+/* =============================================================
+   FONCTIONS DE CONVERSION MONDE <-> CANVAS
+   ============================================================= */
+function worldToCanvas(wx, wy) {
+  const cx = (wx - CONFIG.worldXmin) / (CONFIG.worldXmax - CONFIG.worldXmin) * CONFIG.canvasW;
+  // Y inversé : wy positif = haut écran
+  const cy = (1 - (wy - CONFIG.worldYmin) / (CONFIG.worldYmax - CONFIG.worldYmin)) * CONFIG.canvasH;
+  return [cx, cy];
+}
+
+function canvasToWorld(cx, cy) {
+  const wx = CONFIG.worldXmin + cx / CONFIG.canvasW * (CONFIG.worldXmax - CONFIG.worldXmin);
+  const wy = CONFIG.worldYmin + (1 - cy / CONFIG.canvasH) * (CONFIG.worldYmax - CONFIG.worldYmin);
+  return [wx, wy];
+}
+
+/* =============================================================
+   FONCTIONS D'ONDES (hydrogénoïdes simplifiées, 2D)
+   ============================================================= */
+
+/**
+ * Orbitale 2p_x centrée en (0,0), orientée selon y du monde (= x de la molécule)
+ * ψ_{2p_x}(r, θ) ∝ r·cos(θ)·exp(-ζ·r/2)
+ * où θ est l'angle par rapport à l'axe x (vertical du monde)
+ * Simplifié en 2D: ψ = y · exp(-ζ·r)  (y = composante verticale du monde)
+ */
+function psi2px(x, y, zeta) {
+  const r = Math.sqrt(x * x + y * y);
+  if (r < 1e-10) return 0;
+  return y * Math.exp(-zeta * r);
+}
+
+/**
+ * Orbitale 1s centrée en (bx, by)
+ * ψ_{1s}(r) ∝ exp(-ζ·r)
+ */
+function psi1s(x, y, bx, by, zeta) {
+  const dx = x - bx;
+  const dy = y - by;
+  const r = Math.sqrt(dx * dx + dy * dy);
+  return Math.exp(-zeta * r);
+}
+
+/* =============================================================
+   CALCUL DU RECOUVREMENT
+   ============================================================= */
+function computeOverlap() {
+  const { bx, by, zetaP, zetaS } = state;
+  const step = CONFIG.gridStep;
+  const dxWorld = (CONFIG.worldXmax - CONFIG.worldXmin) / CONFIG.canvasW * step;
+  const dyWorld = (CONFIG.worldYmax - CONFIG.worldYmin) / CONFIG.canvasH * step;
+  const dA = dxWorld * dyWorld;  // élément de surface
+
+  // Rayon effectif de la 1s (zone de calcul)
+  const rCut = CONFIG.sCutoffMultiplier / zetaS;
+
+  // Bornes du cercle 1s en coordonnées monde
+  const xMin = Math.max(CONFIG.worldXmin, bx - rCut);
+  const xMax = Math.min(CONFIG.worldXmax, bx + rCut);
+  const yMin = Math.max(CONFIG.worldYmin, by - rCut);
+  const yMax = Math.min(CONFIG.worldYmax, by + rCut);
+
+  let sumPos = 0, sumNeg = 0;
+  let sumA2 = 0, sumB2 = 0;
+
+  // Aussi calculer les normes sur un domaine plus large pour la normalisation
+  // Norme de A : intégrale sur tout le canvas
+  let normA2 = 0;
+  for (let wy = CONFIG.worldYmin; wy <= CONFIG.worldYmax; wy += dyWorld) {
+    for (let wx = CONFIG.worldXmin; wx <= CONFIG.worldXmax; wx += dxWorld) {
+      const vA = psi2px(wx, wy, zetaP);
+      normA2 += vA * vA * dA;
+    }
+  }
+
+  // Norme de B : intégrale dans le cercle de coupure
+  let normB2 = 0;
+  for (let wy = yMin; wy <= yMax; wy += dyWorld) {
+    for (let wx = xMin; wx <= xMax; wx += dxWorld) {
+      const dx = wx - bx;
+      const dy = wy - by;
+      if (dx * dx + dy * dy > rCut * rCut) continue;
+      const vB = psi1s(wx, wy, bx, by, zetaS);
+      normB2 += vB * vB * dA;
+    }
+  }
+
+  // Produit dans la zone d'intersection
+  for (let wy = yMin; wy <= yMax; wy += dyWorld) {
+    for (let wx = xMin; wx <= xMax; wx += dxWorld) {
+      const dx = wx - bx;
+      const dy = wy - by;
+      if (dx * dx + dy * dy > rCut * rCut) continue;
+
+      const vA = psi2px(wx, wy, zetaP);
+      const vB = psi1s(wx, wy, bx, by, zetaS);
+      const prod = vA * vB * dA;
+
+      if (prod > 0) sumPos += prod;
+      else sumNeg += prod;
+    }
+  }
+
+  const normFactor = Math.sqrt(normA2 * normB2);
+  const sNorm = normFactor > 1e-15 ? (sumPos + sumNeg) / normFactor : 0;
+  const sPosNorm = normFactor > 1e-15 ? sumPos / normFactor : 0;
+  const sNegNorm = normFactor > 1e-15 ? sumNeg / normFactor : 0;
+
+  return { sumPos: sPosNorm, sumNeg: sNegNorm, sNorm, rCut };
+}
+
+/* =============================================================
+   DESSIN
+   ============================================================= */
+function draw() {
+  const { bx, by, zetaP, zetaS } = state;
+  const W = CONFIG.canvasW;
+  const H = CONFIG.canvasH;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Fond
+  ctx.fillStyle = "#fffef9";
+  ctx.fillRect(0, 0, W, H);
+
+  // Grille subtile
+  ctx.strokeStyle = "rgba(0,0,0,0.04)";
+  ctx.lineWidth = 1;
+  for (let wx = Math.ceil(CONFIG.worldXmin); wx <= Math.floor(CONFIG.worldXmax); wx++) {
+    const [cx] = worldToCanvas(wx, 0);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  }
+  for (let wy = Math.ceil(CONFIG.worldYmin); wy <= Math.floor(CONFIG.worldYmax); wy++) {
+    const [, cy] = worldToCanvas(0, wy);
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  }
+
+  // Axes
+  const [ox, oy] = worldToCanvas(0, 0);
+  ctx.strokeStyle = "rgba(0,0,0,0.3)";
+  ctx.lineWidth = 1.5;
+  // Axe z (horizontal)
+  ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
+  // Axe x (vertical)
+  ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke();
+
+  // Étiquettes axes
+  ctx.fillStyle = "rgba(0,0,0,0.4)";
+  ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("z", W - 18, oy - 8);
+  ctx.fillText("x", ox + 8, 16);
+
+  // Rayon de coupure 1s
+  const rCut = CONFIG.sCutoffMultiplier / zetaS;
+
+  // === Dessiner le produit d'overlap dans la zone d'intersection ===
+  const step = CONFIG.gridStep;
+  const [bxC, byC] = worldToCanvas(bx, by);
+  const rCutPx = rCut / (CONFIG.worldXmax - CONFIG.worldXmin) * W;
+
+  // Zone utile en pixels
+  const pxXmin = Math.max(0, Math.floor(bxC - rCutPx));
+  const pxXmax = Math.min(W, Math.ceil(bxC + rCutPx));
+  const pxYmin = Math.max(0, Math.floor(byC - rCutPx));
+  const pxYmax = Math.min(H, Math.ceil(byC + rCutPx));
+
+  // Trouver le max absolu du produit pour la normalisation du rendu
+  let maxAbsProd = 0;
+  const products = [];
+
+  for (let py = pxYmin; py < pxYmax; py += step) {
+    for (let px = pxXmin; px < pxXmax; px += step) {
+      const [wx, wy] = canvasToWorld(px, py);
+      const dx = wx - bx;
+      const dy = wy - by;
+      if (dx * dx + dy * dy > rCut * rCut) continue;
+
+      const vA = psi2px(wx, wy, zetaP);
+      const vB = psi1s(wx, wy, bx, by, zetaS);
+      const prod = vA * vB;
+
+      if (Math.abs(prod) > CONFIG.productThreshold) {
+        products.push({ px, py, prod });
+        if (Math.abs(prod) > maxAbsProd) maxAbsProd = Math.abs(prod);
+      }
+    }
+  }
+
+  // Dessiner les cellules colorées
+  if (maxAbsProd > 0) {
+    for (const { px, py, prod } of products) {
+      const intensity = Math.min(1, Math.abs(prod) / maxAbsProd);
+      const alpha = 0.12 + intensity * 0.55;
+      if (prod > 0) {
+        ctx.fillStyle = `rgba(200, 40, 30, ${alpha})`;
+      } else {
+        ctx.fillStyle = `rgba(30, 80, 180, ${alpha})`;
+      }
+      ctx.fillRect(px - step/2, py - step/2, step, step);
+    }
+  }
+
+  // === Dessiner les lobes de la 2p_x (contour) ===
+  // Lobe positif (haut, y > 0 en monde)
+  drawLobe(zetaP, +1, "rgba(200, 60, 40, 0.18)", "rgba(200, 60, 40, 0.55)");
+  // Lobe négatif (bas, y < 0 en monde)
+  drawLobe(zetaP, -1, "rgba(40, 80, 180, 0.18)", "rgba(40, 80, 180, 0.55)");
+
+  // === Dessiner l'orbitale 1s (cercle) ===
+  ctx.beginPath();
+  ctx.arc(bxC, byC, rCutPx, 0, 2 * Math.PI);
+  ctx.fillStyle = "rgba(100, 160, 60, 0.12)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(100, 160, 60, 0.6)";
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // Étiquette 1s
+  ctx.fillStyle = "rgba(60, 120, 40, 0.8)";
+  ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText("1s", bxC, byC + rCutPx + 16);
+
+  // === Atomes ===
+  // Atome A (fixe, origine)
+  ctx.beginPath();
+  ctx.arc(ox, oy, CONFIG.atomRadius, 0, 2 * Math.PI);
+  ctx.fillStyle = "#222";
+  ctx.fill();
+  ctx.fillStyle = "#333";
+  ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("A", ox + 10, oy + 4);
+
+  // Étiquette 2p_x
+  ctx.fillStyle = "rgba(160, 50, 35, 0.8)";
+  ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "center";
+  const [, lobeLabelY] = worldToCanvas(0, 2.5 / zetaP);
+  ctx.fillText("2pₓ", ox, Math.min(lobeLabelY - 6, oy - 50));
+
+  // Signes des lobes
+  ctx.font = "bold 16px 'Palatino Linotype', Georgia, serif";
+  const [, plusY] = worldToCanvas(0, 1.2 / zetaP);
+  const [, minusY] = worldToCanvas(0, -1.2 / zetaP);
+  ctx.fillStyle = "rgba(200, 60, 40, 0.7)";
+  ctx.fillText("+", ox, plusY + 5);
+  ctx.fillStyle = "rgba(40, 80, 180, 0.7)";
+  ctx.fillText("−", ox, minusY + 5);
+
+  // Atome B (déplaçable)
+  ctx.beginPath();
+  ctx.arc(bxC, byC, CONFIG.atomRadius + 1, 0, 2 * Math.PI);
+  // Couleur atome B
+  ctx.fillStyle = "#2a5d8f";
+  ctx.fill();
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = "#2a5d8f";
+  ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "left";
+  ctx.fillText("B", bxC + 10, byC + 4);
+}
+
+/**
+ * Dessine un lobe de la 2p_x par contour
+ * sign: +1 pour le lobe positif (y>0), -1 pour négatif
+ */
+function drawLobe(zeta, sign, fillColor, strokeColor) {
+  // Trouver le contour du lobe en coordonnées polaires
+  // |ψ| = |y| * exp(-ζr) = r|sinθ| exp(-ζr) = threshold
+  // On trace le contour pour un seuil fixe
+  const threshold = CONFIG.lobeContour;
+  const nAngles = 80;
+  const points = [];
+
+  for (let i = 0; i <= nAngles; i++) {
+    const theta = sign > 0
+      ? (i / nAngles) * Math.PI           // 0 to π (haut)
+      : Math.PI + (i / nAngles) * Math.PI; // π to 2π (bas)
+
+    const sinT = Math.sin(theta);
+    const cosT = Math.cos(theta);
+
+    if (Math.abs(sinT) < 0.01) {
+      points.push(worldToCanvas(0, 0));
+      continue;
+    }
+
+    // Résoudre r*|sin(θ)|*exp(-ζr) = threshold
+    // Newton ou bisection
+    let rLow = 0, rHigh = 6 / zeta;
+    for (let iter = 0; iter < 40; iter++) {
+      const rMid = (rLow + rHigh) / 2;
+      const val = rMid * Math.abs(sinT) * Math.exp(-zeta * rMid);
+      if (val > threshold) rLow = rMid;
+      else rHigh = rMid;
+    }
+    const r = (rLow + rHigh) / 2;
+
+    // Monde: x = r*cos(theta) est la composante z (horizontale)
+    //        y = r*sin(theta) est la composante x (verticale)
+    const wx = r * cosT;  // z direction
+    const wy = r * sinT;  // x direction
+    points.push(worldToCanvas(wx, wy));
+  }
+
+  if (points.length < 3) return;
+
+  ctx.beginPath();
+  ctx.moveTo(points[0][0], points[0][1]);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i][0], points[i][1]);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+/* =============================================================
+   MISE À JOUR COMPLÈTE
+   ============================================================= */
+function update() {
+  draw();
+  const result = computeOverlap();
+
+  resPos.textContent = result.sumPos.toFixed(4);
+  resNeg.textContent = result.sumNeg.toFixed(4);
+  resTotal.textContent = (result.sNorm >= 0 ? "+" : "") + result.sNorm.toFixed(4);
+
+  // Barre
+  const maxBar = 0.6; // échelle de la barre
+  const posPct = Math.min(50, Math.abs(result.sumPos) / maxBar * 50);
+  const negPct = Math.min(50, Math.abs(result.sumNeg) / maxBar * 50);
+  barPos.style.width = posPct + "%";
+  barPos.style.left = "50%";
+  barNeg.style.width = negPct + "%";
+  barNeg.style.left = (50 - negPct) + "%";
+
+  coordsEl.textContent = `B = (${state.bx.toFixed(2)}, ${state.by.toFixed(2)})`;
+}
+
+/* =============================================================
+   INTERACTIONS SOURIS ET TACTILE
+   ============================================================= */
+function getPointerPos(e) {
+  const rect = cvs.getBoundingClientRect();
+  const scaleX = CONFIG.canvasW / rect.width;
+  const scaleY = CONFIG.canvasH / rect.height;
+  let clientX, clientY;
+  if (e.touches) {
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+  return [
+    (clientX - rect.left) * scaleX,
+    (clientY - rect.top) * scaleY,
+  ];
+}
+
+function isNearB(px, py) {
+  const [bxC, byC] = worldToCanvas(state.bx, state.by);
+  const rCutPx = (CONFIG.sCutoffMultiplier / state.zetaS) / (CONFIG.worldXmax - CONFIG.worldXmin) * CONFIG.canvasW;
+  const dist = Math.sqrt((px - bxC) ** 2 + (py - byC) ** 2);
+  // Grab if near atom B or inside the 1s circle
+  return dist < Math.max(rCutPx + 15, 30);
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  const [px, py] = getPointerPos(e);
+  if (isNearB(px, py)) {
+    state.dragging = true;
+  }
+}
+
+function moveDrag(e) {
+  if (!state.dragging) return;
+  e.preventDefault();
+  const [px, py] = getPointerPos(e);
+  const [wx, wy] = canvasToWorld(px, py);
+  state.bx = Math.max(CONFIG.worldXmin + 0.5, Math.min(CONFIG.worldXmax - 0.5, wx));
+  state.by = Math.max(CONFIG.worldYmin + 0.5, Math.min(CONFIG.worldYmax - 0.5, wy));
+  update();
+}
+
+function endDrag(e) {
+  state.dragging = false;
+}
+
+cvs.addEventListener("mousedown", startDrag);
+cvs.addEventListener("mousemove", moveDrag);
+cvs.addEventListener("mouseup", endDrag);
+cvs.addEventListener("mouseleave", endDrag);
+cvs.addEventListener("touchstart", startDrag, { passive: false });
+cvs.addEventListener("touchmove", moveDrag, { passive: false });
+cvs.addEventListener("touchend", endDrag);
+
+/* =============================================================
+   SLIDERS
+   ============================================================= */
+sliderZetaP.addEventListener("input", () => {
+  state.zetaP = parseFloat(sliderZetaP.value);
+  valZetaP.textContent = state.zetaP.toFixed(2);
+  update();
+});
+
+sliderZetaS.addEventListener("input", () => {
+  state.zetaS = parseFloat(sliderZetaS.value);
+  valZetaS.textContent = state.zetaS.toFixed(2);
+  update();
+});
+
+/* =============================================================
+   RESET
+   ============================================================= */
+btnReset.addEventListener("click", () => {
+  state.bx = CONFIG.initBx;
+  state.by = CONFIG.initBy;
+  state.zetaP = CONFIG.defaultZetaP;
+  state.zetaS = CONFIG.defaultZetaS;
+  sliderZetaP.value = CONFIG.defaultZetaP;
+  sliderZetaS.value = CONFIG.defaultZetaS;
+  valZetaP.textContent = CONFIG.defaultZetaP.toFixed(2);
+  valZetaS.textContent = CONFIG.defaultZetaS.toFixed(2);
+  update();
+});
+
+/* =============================================================
+   INITIALISATION
+   ============================================================= */
+update();
+
+</script>
+</body>
+</html>
