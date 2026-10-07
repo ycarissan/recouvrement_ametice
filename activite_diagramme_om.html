@@ -309,6 +309,27 @@ canvas { max-width: 100%; height: auto; cursor: default; }
   border-left: 3px solid var(--accent2);
   font-family: "Cambria Math", "Times New Roman", serif;
 }
+.mode-switch {
+  display: flex;
+  border: 1px solid var(--rule);
+  margin-bottom: 1.1em;
+}
+.mode-switch button {
+  flex: 1;
+  padding: 0.45em 0.3em;
+  border: none;
+  background: #f0ece4;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.88em;
+  cursor: pointer;
+}
+.mode-switch button + button { border-left: 1px solid var(--rule); }
+.mode-switch button.active {
+  background: var(--accent2);
+  color: #fff;
+}
+.param-group .val.wide { min-width: 3.8em; }
 .hint {
   margin-top: 0.8em;
   font-size: 0.8em;
@@ -331,11 +352,32 @@ canvas { max-width: 100%; height: auto; cursor: default; }
   </div>
 
   <div class="panel">
+    <div class="mode-switch">
+      <button type="button" id="modeReal" class="active">Éléments réels</button>
+      <button type="button" id="modeFree">Mode libre</button>
+    </div>
+
     <h2>Atomes</h2>
 
     <div class="atom-group atomA">
       <h3>Atome A (gauche)</h3>
       <select id="selA"></select>
+      <div class="free-controls" id="freeA" hidden>
+        <div class="param-group">
+          <label>Énergie α<sub>s</sub> (eV)</label>
+          <div class="slider-row">
+            <input type="range" id="sliderAsA" min="-40" max="-2" step="0.1" value="-21.4">
+            <span class="val wide" id="valAsA">−21.4</span>
+          </div>
+        </div>
+        <div class="param-group" id="groupApA">
+          <label>Énergie α<sub>p</sub> (eV)</label>
+          <div class="slider-row">
+            <input type="range" id="sliderApA" min="-40" max="-2" step="0.1" value="-11.4">
+            <span class="val wide" id="valApA">−11.4</span>
+          </div>
+        </div>
+      </div>
       <label class="checkbox-row"><input type="checkbox" id="chkPA"><span>Orbitales p</span></label>
       <div class="param-group">
         <label>Nombre d'électrons</label>
@@ -350,6 +392,22 @@ canvas { max-width: 100%; height: auto; cursor: default; }
     <div class="atom-group atomB">
       <h3>Atome B (droite)</h3>
       <select id="selB"></select>
+      <div class="free-controls" id="freeB" hidden>
+        <div class="param-group">
+          <label>Énergie α<sub>s</sub> (eV)</label>
+          <div class="slider-row">
+            <input type="range" id="sliderAsB" min="-40" max="-2" step="0.1" value="-21.4">
+            <span class="val wide" id="valAsB">−21.4</span>
+          </div>
+        </div>
+        <div class="param-group" id="groupApB">
+          <label>Énergie α<sub>p</sub> (eV)</label>
+          <div class="slider-row">
+            <input type="range" id="sliderApB" min="-40" max="-2" step="0.1" value="-11.4">
+            <span class="val wide" id="valApB">−11.4</span>
+          </div>
+        </div>
+      </div>
       <label class="checkbox-row"><input type="checkbox" id="chkPB"><span>Orbitales p</span></label>
       <div class="param-group">
         <label>Nombre d'électrons</label>
@@ -365,8 +423,8 @@ canvas { max-width: 100%; height: auto; cursor: default; }
     <div class="param-group">
       <label>Distance A–B (Å)</label>
       <div class="slider-row">
-        <input type="range" id="sliderR" min="1.00" max="4.00" step="0.01" value="1.00">
-        <span class="val" id="valR">1.00</span>
+        <input type="range" id="sliderR" min="1.00" max="4.00" step="0.01" value="1.20">
+        <span class="val" id="valR">1.20</span>
       </div>
     </div>
 
@@ -395,7 +453,7 @@ canvas { max-width: 100%; height: auto; cursor: default; }
       </div>
     </div>
 
-    <div class="hint">Faire glisser un des axes d'énergie latéralement pour rapprocher ou éloigner les atomes. Cliquer sur une orbitale pour l'agrandir.</div>
+    <div class="hint">Faire glisser un des axes d'énergie latéralement pour rapprocher ou éloigner les atomes. Cliquer sur une orbitale pour l'agrandir. En mode libre, faire glisser verticalement les cases d'une OA pour changer son énergie.</div>
 
     <button class="reset" id="btnReset">Réinitialiser</button>
 
@@ -446,12 +504,12 @@ const CONFIG = {
   sepMin: 520,
   sepMax: 810,
   Rmin: 1.00,
-  Rmax: 4.00,
-  defaultR: 1.00,
+  Rmax: 4.00,          // distance initiale : demi-somme des rayons de van der Waals
 
   // Énergies affichées : de 1.4 × (α le plus bas) jusqu'à Emax (eV)
   EminFactor: 1.4,
   Emax: 10,
+  breakGap: 24,            // hauteur (px) de la coupure des axes, au-dessus de Emax
 
   // Hückel étendu : H_AB = K · S_AB · (α_A + α_B) / 2
   K: 1.75,
@@ -468,6 +526,16 @@ const CONFIG = {
   pGlyphSpacing: 52,       // espacement des vignettes p_z, p_x, p_y
   pGlyphScale: 0.7,        // échelle réduite de ces vignettes
 
+  // Mode libre : atomes fictifs A et B, de la taille du carbone
+  free: {
+    as: -21.4,             // α_s initial (eV), valeur du carbone
+    ap: -11.4,             // α_p initial (eV), valeur du carbone
+    zeta: 1.625,           // ζ du carbone, fixé
+    rvdw: 1.70,            // rayon de van der Waals du carbone (Å)
+    alphaMin: -40,
+    alphaMax: -2,
+  },
+
   // Fenêtre d'agrandissement
   zoomW: 640,
   zoomH: 380,
@@ -482,18 +550,42 @@ const CONFIG = {
 
 const BOHR = 0.529177; // Å
 
-/* Paramètres de Hückel étendu (énergies en eV, exposants de Slater en bohr⁻¹) */
+/*
+ * Paramètres de Hückel étendu (énergies en eV, exposants de Slater en bohr⁻¹)
+ * rvdw : rayon de van der Waals en Å (Bondi 1964 ; Be : Mantina et al. 2009)
+ */
 const ELEMENTS = {
-  H:  { n: 1, zs: 1.300, as: -13.6, p: null, ve: 1 },
-  He: { n: 1, zs: 1.688, as: -24.6, p: null, ve: 2 },
-  Li: { n: 2, zs: 0.650, as: -5.4,  p: { zp: 0.650, ap: -3.5 },  ve: 1 },
-  Be: { n: 2, zs: 0.975, as: -10.0, p: { zp: 0.975, ap: -6.0 },  ve: 2 },
-  B:  { n: 2, zs: 1.300, as: -15.2, p: { zp: 1.300, ap: -8.5 },  ve: 3 },
-  C:  { n: 2, zs: 1.625, as: -21.4, p: { zp: 1.625, ap: -11.4 }, ve: 4 },
-  N:  { n: 2, zs: 1.950, as: -26.0, p: { zp: 1.950, ap: -13.4 }, ve: 5 },
-  O:  { n: 2, zs: 2.275, as: -32.3, p: { zp: 2.275, ap: -14.8 }, ve: 6 },
-  F:  { n: 2, zs: 2.425, as: -40.0, p: { zp: 2.425, ap: -18.1 }, ve: 7 },
+  H:  { n: 1, zs: 1.300, as: -13.6, p: null, ve: 1, rvdw: 1.20 },
+  He: { n: 1, zs: 1.688, as: -24.6, p: null, ve: 2, rvdw: 1.40 },
+  Li: { n: 2, zs: 0.650, as: -5.4,  p: { zp: 0.650, ap: -3.5 },  ve: 1, rvdw: 1.82 },
+  Be: { n: 2, zs: 0.975, as: -10.0, p: { zp: 0.975, ap: -6.0 },  ve: 2, rvdw: 1.53 },
+  B:  { n: 2, zs: 1.300, as: -15.2, p: { zp: 1.300, ap: -8.5 },  ve: 3, rvdw: 1.92 },
+  C:  { n: 2, zs: 1.625, as: -21.4, p: { zp: 1.625, ap: -11.4 }, ve: 4, rvdw: 1.70 },
+  N:  { n: 2, zs: 1.950, as: -26.0, p: { zp: 1.950, ap: -13.4 }, ve: 5, rvdw: 1.55 },
+  O:  { n: 2, zs: 2.275, as: -32.3, p: { zp: 2.275, ap: -14.8 }, ve: 6, rvdw: 1.52 },
+  F:  { n: 2, zs: 2.425, as: -40.0, p: { zp: 2.425, ap: -18.1 }, ve: 7, rvdw: 1.47 },
 };
+
+/**
+ * Paramètres effectifs de l'atome i : ceux de l'élément en mode « éléments réels »,
+ * ceux d'un atome fictif (énergies réglables, taille du carbone) en mode libre
+ */
+function elementOf(i) {
+  const a = state.atoms[i];
+  if (state.mode !== "libre") return ELEMENTS[a.el];
+  const z = CONFIG.free.zeta;
+  return { n: 2, zs: z, as: a.as, p: { zp: z, ap: a.ap }, ve: 1, rvdw: CONFIG.free.rvdw };
+}
+
+/** Symbole affiché pour l'atome i */
+function atomSymbol(i) {
+  return state.mode === "libre" ? (i === 0 ? "A" : "B") : state.atoms[i].el;
+}
+
+/** Distance initiale : demi-somme des rayons de van der Waals des deux atomes (Å) */
+function vdwDistance() {
+  return (elementOf(0).rvdw + elementOf(1).rvdw) / 2;
+}
 
 const COL_POS = [200, 60, 40];
 const COL_NEG = [40, 80, 180];
@@ -502,11 +594,13 @@ const COL_NEG = [40, 80, 180];
    ÉTAT
    ============================================================= */
 let state = {
+  mode: "reel",         // "reel" (éléments H à F) ou "libre" (atomes fictifs A et B)
+  dragAO: null,         // OA en cours de déplacement vertical (mode libre)
   atoms: [
     { el: "H", p: false, ne: 1 },
     { el: "H", p: false, ne: 1 },
   ],
-  R: CONFIG.defaultR,   // Å
+  R: 1.20,              // Å — fixée par resetAll() à la demi-somme des rayons de van der Waals
   showMO: true,
   dragging: false,
 };
@@ -522,6 +616,12 @@ const ui = [0, 1].map(i => {
     sel: document.getElementById("sel" + s),
     chkP: document.getElementById("chkP" + s),
     num: document.getElementById("numEl" + s),
+    free: document.getElementById("free" + s),
+    sliderAs: document.getElementById("sliderAs" + s),
+    valAs: document.getElementById("valAs" + s),
+    sliderAp: document.getElementById("sliderAp" + s),
+    valAp: document.getElementById("valAp" + s),
+    groupAp: document.getElementById("groupAp" + s),
     minus: document.getElementById("minusEl" + s),
     plus: document.getElementById("plusEl" + s),
   };
@@ -534,6 +634,8 @@ const resSzz = document.getElementById("resSzz");
 const resSxx = document.getElementById("resSxx");
 const resBO = document.getElementById("resBO");
 const btnReset = document.getElementById("btnReset");
+const btnModeReal = document.getElementById("modeReal");
+const btnModeFree = document.getElementById("modeFree");
 const zoomEl = document.getElementById("zoom");
 const zoomTitle = document.getElementById("zoomTitle");
 const zoomCvs = document.getElementById("zoomCvs");
@@ -682,7 +784,7 @@ function solveGeneralized(H, S) {
    ============================================================= */
 function basisOf(atomIdx) {
   const a = state.atoms[atomIdx];
-  const e = ELEMENTS[a.el];
+  const e = elementOf(atomIdx);
   const list = [{ atom: atomIdx, type: "s", n: e.n, zeta: e.zs, alpha: e.as }];
   if (a.p && e.p) {
     list.push({ atom: atomIdx, type: "pz", n: 2, zeta: e.p.zp, alpha: e.p.ap });
@@ -734,7 +836,9 @@ function phaseBonding(funcs, c, S) {
 
 function computeMOs() {
   const Rb = state.R / BOHR;
-  const homonuclear = state.atoms[0].el === state.atoms[1].el && state.atoms[0].p === state.atoms[1].p;
+  const eA = elementOf(0), eB = elementOf(1);
+  const homonuclear = state.atoms[0].el === state.atoms[1].el && state.atoms[0].p === state.atoms[1].p
+    && eA.as === eB.as && (!eA.p || eA.p.ap === eB.p.ap);
   const bA = basisOf(0), bB = basisOf(1);
   const sigma = [...bA, ...bB].filter(f => f.type !== "px");
   const pi = [...bA, ...bB].filter(f => f.type === "px");
@@ -837,16 +941,40 @@ function axesX() {
   return [CONFIG.canvasW / 2 - sep / 2, CONFIG.canvasW / 2 + sep / 2];
 }
 function energyRange() {
+  // Mode libre : échelle fixe, pour que le diagramme ne bouge pas pendant les réglages
+  if (state.mode === "libre") return [CONFIG.EminFactor * CONFIG.free.alphaMin, CONFIG.Emax];
   let lo = 0;
-  for (const i of [0, 1]) {
-    const e = ELEMENTS[state.atoms[i].el];
-    lo = Math.min(lo, e.as);
-  }
+  for (const i of [0, 1]) lo = Math.min(lo, elementOf(i).as);
   return [CONFIG.EminFactor * lo, CONFIG.Emax];
 }
 function yOfE(E, range) {
   const [Emin, Emax] = range;
   return CONFIG.plotTop + (Emax - E) / (Emax - Emin) * (CONFIG.plotBottom - CONFIG.plotTop);
+}
+
+/**
+ * Échelle verticale du diagramme. Si des OM dépassent Emax, les axes sont coupés :
+ * ces OM sont placées dans une zone au-dessus de la coupure (yBreak), le reste
+ * du diagramme gardant une échelle continue de Emin à Emax en dessous.
+ */
+function energyAxis(mos, elemH) {
+  const range = energyRange();
+  const [Emin, Emax] = range;
+  const high = mos.filter(m => m.E > Emax);
+  if (!high.length) {
+    return { y: E => yOfE(E, range), yBreak: null,
+             evPerPx: (Emax - Emin) / (CONFIG.plotBottom - CONFIG.plotTop) };
+  }
+
+  const n = high.length;
+  const Ehigh = Math.max(...high.map(m => m.E));
+  const yBreak = CONFIG.plotTop + n * elemH - CONFIG.boxH / 2 + CONFIG.breakGap / 2;
+  const lowerTop = yBreak + CONFIG.breakGap / 2 + CONFIG.boxH / 2;
+  const y = E => {
+    if (E <= Emax) return lowerTop + (Emax - E) / (Emax - Emin) * (CONFIG.plotBottom - lowerTop);
+    return CONFIG.plotTop + (Ehigh - E) / (Ehigh - Emax) * (n - 1) * elemH;
+  };
+  return { y, yBreak, evPerPx: (Emax - Emin) / (CONFIG.plotBottom - lowerTop) };
 }
 
 /**
@@ -868,13 +996,15 @@ function relax(items, height) {
   }
   const fitted = [];
   for (const b of blocks) for (let k = 0; k < b.n; k++) fitted.push(b.sum / b.n);
-  let ys = fitted.map((v, k) => v + k * height);
-  // Garder l'ensemble dans la zone de tracé
+  const ys = fitted.map((v, k) => v + k * height);
+  // Garder l'ensemble dans la zone de tracé : on ne repousse que les éléments
+  // en contact avec celui qui déborde (un élément isolé reste à sa place)
   const lowLimit = CONFIG.canvasH - 50 - (height - CONFIG.boxH / 2);
-  if (ys.length) {
-    if (ys[0] < CONFIG.plotTop) ys = ys.map(v => v + CONFIG.plotTop - ys[0]);
-    const last = ys[ys.length - 1];
-    if (last > lowLimit) ys = ys.map(v => v - (last - lowLimit));
+  for (let k = ys.length - 1; k >= 0; k--) {
+    ys[k] = Math.min(ys[k], k === ys.length - 1 ? lowLimit : ys[k + 1] - height);
+  }
+  for (let k = 0; k < ys.length; k++) {
+    ys[k] = Math.max(ys[k], k === 0 ? CONFIG.plotTop : ys[k - 1] + height);
   }
   order.forEach((i, k) => { items[i].yDisp = ys[k]; });
 }
@@ -882,7 +1012,8 @@ function relax(items, height) {
 /* =============================================================
    DESSIN DES ORBITALES (petites vignettes)
    ============================================================= */
-let hitRects = [];   // zones cliquables (vignettes) du dernier dessin
+let hitRects = [];   // zones cliquables (vignettes, cases des OA) du dernier dessin
+let lastEvPerPx = 0.1; // eV par pixel de l'échelle d'énergie (sous la coupure)
 const glyphCvs = document.createElement("canvas");
 const glyphCtx = glyphCvs.getContext("2d");
 
@@ -1065,11 +1196,11 @@ function drawMOName(mo, x, y) {
 function draw(data) {
   const { mos, bA, bB } = data;
   const W = CONFIG.canvasW, H = CONFIG.canvasH;
-  const range = energyRange();
   const [xL, xR] = axesX();
   const cx = W / 2;
   const scale = glyphScale(bA, bB);
   const elemH = CONFIG.boxH / 2 + CONFIG.glyphGap + CONFIG.glyphH + CONFIG.boxH / 2 + CONFIG.elementGap;
+  const axis = energyAxis(mos, elemH);
 
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = "#fffef9";
@@ -1079,7 +1210,7 @@ function draw(data) {
   // Axes : seule la référence E = 0 est graduée (l'échelle n'est pas respectée
   // exactement, les niveaux étant écartés pour laisser la place aux dessins)
   {
-    const y = yOfE(0, range);
+    const y = axis.y(0);
     ctx.font = "12px 'Courier New', monospace";
     ctx.strokeStyle = "rgba(0,0,0,0.04)";
     ctx.lineWidth = 1;
@@ -1093,7 +1224,20 @@ function draw(data) {
   for (const [x, col] of [[xL, "#222"], [xR, "#2a5d8f"]]) {
     ctx.strokeStyle = state.dragging ? "rgba(42,93,143,0.6)" : "rgba(0,0,0,0.3)";
     ctx.lineWidth = state.dragging ? 2.5 : 1.5;
-    ctx.beginPath(); ctx.moveTo(x, CONFIG.plotBottom + 10); ctx.lineTo(x, CONFIG.plotTop - 18); ctx.stroke();
+    if (axis.yBreak === null) {
+      ctx.beginPath(); ctx.moveTo(x, CONFIG.plotBottom + 10); ctx.lineTo(x, CONFIG.plotTop - 18); ctx.stroke();
+    } else {
+      // Axe coupé : deux segments et deux traits obliques parallèles
+      const yb = axis.yBreak;
+      ctx.beginPath();
+      ctx.moveTo(x, CONFIG.plotBottom + 10); ctx.lineTo(x, yb + 4);
+      ctx.moveTo(x, yb - 4); ctx.lineTo(x, CONFIG.plotTop - 18);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x - 7, yb + 1); ctx.lineTo(x + 7, yb - 7);
+      ctx.moveTo(x - 7, yb + 7); ctx.lineTo(x + 7, yb - 1);
+      ctx.stroke();
+    }
     ctx.fillStyle = "rgba(0,0,0,0.3)";
     ctx.beginPath();
     ctx.moveTo(x, CONFIG.plotTop - 24); ctx.lineTo(x - 4, CONFIG.plotTop - 15); ctx.lineTo(x + 4, CONFIG.plotTop - 15);
@@ -1102,6 +1246,16 @@ function draw(data) {
     ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
     ctx.textAlign = "center";
     ctx.fillText("E (eV)", x, CONFIG.plotTop - 28);
+  }
+
+  // Coupure : pointillé léger entre les deux axes
+  if (axis.yBreak !== null) {
+    ctx.save();
+    ctx.setLineDash([3, 5]);
+    ctx.strokeStyle = "rgba(0,0,0,0.15)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xL + 10, axis.yBreak); ctx.lineTo(xR - 10, axis.yBreak); ctx.stroke();
+    ctx.restore();
   }
 
   // Étiquettes des atomes et poignées de déplacement
@@ -1114,7 +1268,7 @@ function draw(data) {
     ctx.fillStyle = "#fff";
     ctx.font = "bold 14px 'Palatino Linotype', Georgia, serif";
     ctx.textAlign = "center";
-    ctx.fillText(a.el, x, y + 5);
+    ctx.fillText(atomSymbol(i), x, y + 5);
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.font = "14px 'Palatino Linotype', Georgia, serif";
     ctx.fillText("◂", x - 26, y + 5);
@@ -1139,11 +1293,11 @@ function draw(data) {
   [bA, bB].forEach((basis, i) => {
     const a = state.atoms[i];
     const x = i === 0 ? xL + CONFIG.aoOffset : xR - CONFIG.aoOffset;
-    const e = ELEMENTS[a.el];
+    const e = elementOf(i);
     const groups = [{ nBoxes: 1, E: e.as, type: "s", f: basis[0] }];
     if (basis.length > 1) groups.push({ nBoxes: 3, E: e.p.ap, type: "p", f: basis[1], fx: basis[2] });
     const occ = fill(groups, a.ne);
-    const items = groups.map((g, k) => ({ ...g, occ: occ[k], x, atom: i, y: yOfE(g.E, range) }));
+    const items = groups.map((g, k) => ({ ...g, occ: occ[k], x, atom: i, y: axis.y(g.E) }));
     relax(items, elemH);
     aoItems.push(...items);
   });
@@ -1152,7 +1306,7 @@ function draw(data) {
   const moGroups = mos.map(mo => ({ nBoxes: mo.deg, E: mo.E }));
   const moOcc = fill(moGroups, state.atoms[0].ne + state.atoms[1].ne);
   const moItems = mos.map((mo, k) => {
-    return { mo, occ: moOcc[k], y: Math.max(CONFIG.plotTop, yOfE(mo.E, range)) };
+    return { mo, occ: moOcc[k], y: axis.y(mo.E) };
   });
   relax(moItems, elemH);
 
@@ -1179,8 +1333,16 @@ function draw(data) {
   ctx.restore();
 
   // Cases et vignettes des OA
+  lastEvPerPx = axis.evPerPx;
   for (const ao of aoItems) {
     const [x0, x1] = drawBoxes(ao.x, ao.yDisp, ao.occ);
+    hitRects.push({ x: x0 - 4, y: ao.yDisp - CONFIG.boxH / 2 - 4, w: x1 - x0 + 8, h: CONFIG.boxH + 8,
+                    kind: "aoBox", atom: ao.atom, type: ao.type });
+    if (state.dragAO && state.dragAO.atom === ao.atom && state.dragAO.type === ao.type) {
+      ctx.strokeStyle = "#2a5d8f";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x0 - 3, ao.yDisp - CONFIG.boxH / 2 - 3, x1 - x0 + 6, CONFIG.boxH + 6);
+    }
     const gy = ao.yDisp + CONFIG.boxH / 2 + CONFIG.glyphGap;
     if (ao.type === "s") {
       const gw = CONFIG.glyphW / 2 + 16;
@@ -1196,7 +1358,7 @@ function draw(data) {
         hitRects.push({ x: gx - sp / 2, y: gy, w: sp, h: CONFIG.glyphH, kind: "ao", f });
       });
     }
-    const e = ELEMENTS[state.atoms[ao.atom].el];
+    const e = elementOf(ao.atom);
     const nLabel = (ao.type === "s" ? e.n : 2) + ao.type;
     ctx.fillStyle = "#1a1a2e";
     ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
@@ -1247,11 +1409,42 @@ function update() {
 /* =============================================================
    PANNEAU : ATOMES, ÉLECTRONS, DISTANCE
    ============================================================= */
+/**
+ * Mode libre : fixe l'énergie d'une OA de l'atome i (type "s" ou "p") en
+ * imposant α_p ≥ α_s (les p ne descendent pas sous la s). Si l'atome n'a pas
+ * d'orbitales p, α_s reste libre et α_p (invisible) suit pour garder l'ordre.
+ */
+function setAlpha(i, type, v) {
+  const a = state.atoms[i];
+  v = Math.round(Math.max(CONFIG.free.alphaMin, Math.min(CONFIG.free.alphaMax, v)) * 10) / 10;
+  if (type === "p") {
+    a.ap = Math.max(v, a.as);
+  } else if (a.p) {
+    a.as = Math.min(v, a.ap);
+  } else {
+    a.as = v;
+    a.ap = Math.max(a.ap, v);
+  }
+}
+
+function fmtAlpha(v) {
+  return (v < 0 ? "−" : "") + Math.abs(v).toFixed(1);
+}
+
 function syncAtomUI(i) {
   const a = state.atoms[i];
-  const e = ELEMENTS[a.el];
+  const e = elementOf(i);
   const u = ui[i];
-  u.sel.value = a.el;
+  const free = state.mode === "libre";
+  u.sel.hidden = free;
+  u.free.hidden = !free;
+  if (free) {
+    u.sliderAs.value = a.as; u.valAs.textContent = fmtAlpha(a.as);
+    u.sliderAp.value = a.ap; u.valAp.textContent = fmtAlpha(a.ap);
+    u.groupAp.hidden = !a.p;
+  } else {
+    u.sel.value = a.el;
+  }
   u.chkP.disabled = !e.p;
   if (!e.p) a.p = false;
   u.chkP.checked = a.p;
@@ -1273,6 +1466,7 @@ ui.forEach((u, i) => {
     const e = ELEMENTS[u.sel.value];
     state.atoms[i] = { el: u.sel.value, p: !!e.p, ne: e.ve };
     syncAtomUI(i);
+    setR(vdwDistance());
     update();
   });
   u.chkP.addEventListener("change", () => {
@@ -1290,6 +1484,17 @@ ui.forEach((u, i) => {
   u.minus.addEventListener("click", () => setElectrons(state.atoms[i].ne - 1));
   u.plus.addEventListener("click", () => setElectrons(state.atoms[i].ne + 1));
   u.num.addEventListener("change", () => setElectrons(parseInt(u.num.value, 10)));
+  // Mode libre : énergies des OA
+  u.sliderAs.addEventListener("input", () => {
+    setAlpha(i, "s", parseFloat(u.sliderAs.value));
+    syncAtomUI(i);
+    update();
+  });
+  u.sliderAp.addEventListener("input", () => {
+    setAlpha(i, "p", parseFloat(u.sliderAp.value));
+    syncAtomUI(i);
+    update();
+  });
 });
 
 function setR(R) {
@@ -1312,6 +1517,7 @@ chkOM.addEventListener("change", () => {
    AGRANDISSEMENT D'UNE ORBITALE
    ============================================================= */
 function atomName(i) {
+  if (state.mode === "libre") return i === 0 ? "A" : "B";
   return (i === 0 ? "A" : "B") + " (" + state.atoms[i].el + ")";
 }
 
@@ -1429,9 +1635,19 @@ zoomClose.addEventListener("click", closeZoom);
 zoomEl.addEventListener("click", e => { if (e.target === zoomEl) closeZoom(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeZoom(); });
 
+function inRect(r, px, py) {
+  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
+
+/** Vignette cliquable (agrandissement) */
 function hitAt(px, py) {
-  return hitRects.find(r => r.f?.type !== "py"
-    && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h);
+  return hitRects.find(r => (r.kind === "ao" || r.kind === "mo") && r.f?.type !== "py" && inRect(r, px, py));
+}
+
+/** Cases d'OA déplaçables verticalement (mode libre uniquement) */
+function aoBoxAt(px, py) {
+  if (state.mode !== "libre") return null;
+  return hitRects.find(r => r.kind === "aoBox" && inRect(r, px, py)) || null;
 }
 
 /* =============================================================
@@ -1453,6 +1669,15 @@ function isNearAxis(px, py) {
 function startDrag(e) {
   const [px, py] = getPointerPos(e);
   if (!isNearAxis(px, py)) {
+    const box = aoBoxAt(px, py);
+    if (box) {
+      // Mode libre : déplacement vertical d'une OA (s, ou les trois p ensemble)
+      e.preventDefault();
+      const a = state.atoms[box.atom];
+      state.dragAO = { atom: box.atom, type: box.type, y0: py, a0: box.type === "s" ? a.as : a.ap };
+      update();
+      return;
+    }
     const hit = hitAt(px, py);
     if (hit) { e.preventDefault(); openZoom(hit); }
     return;
@@ -1464,8 +1689,18 @@ function startDrag(e) {
 
 function moveDrag(e) {
   const [px, py] = getPointerPos(e);
+  if (state.dragAO) {
+    e.preventDefault();
+    const d = state.dragAO;
+    setAlpha(d.atom, d.type, d.a0 + (d.y0 - py) * lastEvPerPx);
+    syncAtomUI(d.atom);
+    update();
+    return;
+  }
   if (!state.dragging) {
-    cvs.style.cursor = isNearAxis(px, py) ? "ew-resize" : hitAt(px, py) ? "zoom-in" : "default";
+    cvs.style.cursor = isNearAxis(px, py) ? "ew-resize"
+      : aoBoxAt(px, py) ? "ns-resize"
+      : hitAt(px, py) ? "zoom-in" : "default";
     return;
   }
   e.preventDefault();
@@ -1474,8 +1709,9 @@ function moveDrag(e) {
 }
 
 function endDrag() {
-  if (!state.dragging) return;
+  if (!state.dragging && !state.dragAO) return;
   state.dragging = false;
+  state.dragAO = null;
   update();
 }
 
@@ -1491,16 +1727,33 @@ cvs.addEventListener("touchend", endDrag);
    RESET
    ============================================================= */
 function resetAll() {
-  state.atoms = [{ el: "H", p: false, ne: 1 }, { el: "H", p: false, ne: 1 }];
+  if (state.mode === "libre") {
+    // Atomes fictifs : une orbitale s et un électron chacun, énergies du carbone
+    const fa = () => ({ el: "X", p: false, ne: 1, as: CONFIG.free.as, ap: CONFIG.free.ap });
+    state.atoms = [fa(), fa()];
+  } else {
+    state.atoms = [{ el: "H", p: false, ne: 1 }, { el: "H", p: false, ne: 1 }];
+  }
   state.showMO = true;
   chkOM.checked = true;
   syncAtomUI(0);
   syncAtomUI(1);
-  setR(CONFIG.defaultR);
+  setR(vdwDistance());
   update();
 }
 
 btnReset.addEventListener("click", resetAll);
+
+function setMode(mode) {
+  state.mode = mode;
+  btnModeReal.classList.toggle("active", mode === "reel");
+  btnModeFree.classList.toggle("active", mode === "libre");
+  closeZoom();
+  resetAll();
+}
+
+btnModeReal.addEventListener("click", () => setMode("reel"));
+btnModeFree.addEventListener("click", () => setMode("libre"));
 
 /* =============================================================
    INITIALISATION
