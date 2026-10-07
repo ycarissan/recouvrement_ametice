@@ -19,8 +19,8 @@
       <item identifier="ITEM-TRACE-P" identifierref="RES-TRACE-P" isvisible="true">
         <title>Tracé d'une orbitale p</title>
       </item>
-      <item identifier="ITEM-ACTIVITY" identifierref="RES-ACTIVITY" isvisible="true">
-        <title>Activité interactive</title>
+      <item identifier="ITEM-RECOUV-SP" identifierref="RES-RECOUV-SP" isvisible="true">
+        <title>Recouvrement s-p</title>
       </item>
       <item identifier="ITEM-RECOUV-PP" identifierref="RES-RECOUV-PP" isvisible="true">
         <title>Recouvrement p-p</title>
@@ -40,8 +40,8 @@
     <resource identifier="RES-TRACE-P" type="webcontent" href="activite_trace_p.html">
       <file href="activite_trace_p.html"/>
     </resource>
-    <resource identifier="RES-ACTIVITY" type="webcontent" href="activity.html">
-      <file href="activity.html"/>
+    <resource identifier="RES-RECOUV-SP" type="webcontent" href="activite_recouvrement_sp.html">
+      <file href="activite_recouvrement_sp.html"/>
     </resource>
     <resource identifier="RES-RECOUV-PP" type="webcontent" href="activite_recouvrement_pp.html">
       <file href="activite_recouvrement_pp.html"/>
