@@ -355,6 +355,59 @@ canvas { max-width: 100%; height: auto; cursor: default; }
   color: var(--muted);
   font-style: italic;
 }
+
+/* Mise en page : le panneau des paramètres reste toujours à droite du tracé ;
+   c'est le tracé qui rétrécit quand la fenêtre est étroite */
+.main-container { flex-wrap: nowrap; }
+.canvas-wrap, .left-col { flex: 0 1 auto; min-width: 0; }
+.left-col { flex-basis: 720px; width: auto; }
+.left-col .canvas-wrap { flex: none; }
+.panel { flex: 0 0 auto; }
+canvas { max-width: 100%; height: auto; }
+
+/* Légende : étiquette en haut à gauche du tracé, légende en fenêtre au survol */
+.legend-hover {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  outline: none;
+}
+.legend-tab {
+  display: inline-block;
+  padding: 0.15em 0.7em;
+  font-size: 0.8em;
+  font-style: normal;
+  color: var(--accent2);
+  background: #fff;
+  border: 1px solid var(--rule);
+  cursor: help;
+}
+.legend-hover .legend {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  margin-top: 0;
+  width: max-content;
+  max-width: 340px;
+  padding: 0.6em 0.9em;
+  font-size: 0.82rem;
+  font-style: normal;
+  color: var(--muted);
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.legend-hover:hover .legend,
+.legend-hover:focus-within .legend { display: block; }
+.canvas-title .legend-hover {
+  position: relative;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  margin-right: 0.6em;
+}
 </style>
 </head>
 <body>
@@ -367,6 +420,27 @@ canvas { max-width: 100%; height: auto; cursor: default; }
 <div class="main-container">
 
   <div class="canvas-wrap">
+      <div class="legend-hover" tabindex="0">
+        <span class="legend-tab">Légende</span>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(200,60,40,0.35); border-color:rgba(200,60,40,0.75)"></div>
+            <span>Fonction &gt; 0</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(40,80,180,0.35); border-color:rgba(40,80,180,0.75)"></div>
+            <span>Fonction &lt; 0</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line" style="border-top:3px solid rgba(60,130,50,0.9)"></div>
+            <span>Moment dipolaire (de δ− vers δ+)</span>
+          </div>
+          <div class="legend-item">
+            <span style="width:14px; text-align:center; font-weight:bold;">*</span>
+            <span>OM antiliante ; « nl » : non liante</span>
+          </div>
+        </div>
+      </div>
     <canvas id="cvs" width="900" height="820"></canvas>
   </div>
 
@@ -479,24 +553,6 @@ canvas { max-width: 100%; height: auto; cursor: default; }
 
     <button class="reset" id="btnReset">Réinitialiser</button>
 
-    <div class="legend">
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(200,60,40,0.35); border-color:rgba(200,60,40,0.75)"></div>
-        <span>Fonction &gt; 0</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(40,80,180,0.35); border-color:rgba(40,80,180,0.75)"></div>
-        <span>Fonction &lt; 0</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-line" style="border-top:3px solid rgba(60,130,50,0.9)"></div>
-        <span>Moment dipolaire (de δ− vers δ+)</span>
-      </div>
-      <div class="legend-item">
-        <span style="width:14px; text-align:center; font-weight:bold;">*</span>
-        <span>OM antiliante ; « nl » : non liante</span>
-      </div>
-    </div>
 
     <a href="index.html" class="back">← Retour à l'introduction</a>
   </div>

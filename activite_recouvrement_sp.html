@@ -210,6 +210,59 @@ a.back {
   font-size: 0.88em;
   color: var(--accent2);
 }
+
+/* Mise en page : le panneau des paramètres reste toujours à droite du tracé ;
+   c'est le tracé qui rétrécit quand la fenêtre est étroite */
+.main-container { flex-wrap: nowrap; }
+.canvas-wrap, .left-col { flex: 0 1 auto; min-width: 0; }
+.left-col { flex-basis: 720px; width: auto; }
+.left-col .canvas-wrap { flex: none; }
+.panel { flex: 0 0 auto; }
+canvas { max-width: 100%; height: auto; }
+
+/* Légende : étiquette en haut à gauche du tracé, légende en fenêtre au survol */
+.legend-hover {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  outline: none;
+}
+.legend-tab {
+  display: inline-block;
+  padding: 0.15em 0.7em;
+  font-size: 0.8em;
+  font-style: normal;
+  color: var(--accent2);
+  background: #fff;
+  border: 1px solid var(--rule);
+  cursor: help;
+}
+.legend-hover .legend {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  margin-top: 0;
+  width: max-content;
+  max-width: 340px;
+  padding: 0.6em 0.9em;
+  font-size: 0.82rem;
+  font-style: normal;
+  color: var(--muted);
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.legend-hover:hover .legend,
+.legend-hover:focus-within .legend { display: block; }
+.canvas-title .legend-hover {
+  position: relative;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  margin-right: 0.6em;
+}
 </style>
 </head>
 <body>
@@ -222,6 +275,31 @@ a.back {
 <div class="main-container">
 
   <div class="canvas-wrap">
+      <div class="legend-hover" tabindex="0">
+        <span class="legend-tab">Légende</span>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(200,40,30,0.45)"></div>
+            <span>Produit ψ<sub>A</sub>·ψ<sub>B</sub> &gt; 0</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(30,80,180,0.45)"></div>
+            <span>Produit ψ<sub>A</sub>·ψ<sub>B</sub> &lt; 0</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(200,60,40,0.18); border-color:rgba(200,60,40,0.4)"></div>
+            <span>Lobe 2p (+)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(40,80,180,0.18); border-color:rgba(40,80,180,0.4)"></div>
+            <span>Lobe 2p (−)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-swatch" style="background:rgba(100,160,60,0.15); border-color:rgba(100,160,60,0.4)"></div>
+            <span>Orbitale 1s</span>
+          </div>
+        </div>
+      </div>
     <canvas id="cvs" width="800" height="500"></canvas>
   </div>
 
@@ -274,28 +352,6 @@ a.back {
 
     <button class="reset" id="btnReset">Réinitialiser</button>
 
-    <div class="legend">
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(200,40,30,0.45)"></div>
-        <span>Produit ψ<sub>A</sub>·ψ<sub>B</sub> &gt; 0</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(30,80,180,0.45)"></div>
-        <span>Produit ψ<sub>A</sub>·ψ<sub>B</sub> &lt; 0</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(200,60,40,0.18); border-color:rgba(200,60,40,0.4)"></div>
-        <span>Lobe 2p (+)</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(40,80,180,0.18); border-color:rgba(40,80,180,0.4)"></div>
-        <span>Lobe 2p (−)</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-swatch" style="background:rgba(100,160,60,0.15); border-color:rgba(100,160,60,0.4)"></div>
-        <span>Orbitale 1s</span>
-      </div>
-    </div>
 
     <a href="index.html" class="back">← Retour à l'introduction</a>
   </div>
