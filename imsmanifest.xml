@@ -25,6 +25,9 @@
       <item identifier="ITEM-RECOUV-PP" identifierref="RES-RECOUV-PP" isvisible="true">
         <title>Recouvrement p-p</title>
       </item>
+      <item identifier="ITEM-DIAG-OM" identifierref="RES-DIAG-OM" isvisible="true">
+        <title>Diagrammes d'OM</title>
+      </item>
     </organization>
   </organizations>
   <resources>
@@ -42,6 +45,9 @@
     </resource>
     <resource identifier="RES-RECOUV-PP" type="webcontent" href="activite_recouvrement_pp.html">
       <file href="activite_recouvrement_pp.html"/>
+    </resource>
+    <resource identifier="RES-DIAG-OM" type="webcontent" href="activite_diagramme_om.html">
+      <file href="activite_diagramme_om.html"/>
     </resource>
   </resources>
 </manifest>

@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagramme d'OM — Activité interactive</title>
+<style>
+:root {
+  --ink: #1a1a2e;
+  --paper: #faf8f4;
+  --accent: #b8432f;
+  --accent2: #2a5d8f;
+  --rule: #c9bfab;
+  --muted: #7a7062;
+  --pos: rgba(200, 40, 30, 0.45);
+  --neg: rgba(30, 80, 180, 0.45);
+  --lobe-pos: rgba(200, 60, 40, 0.18);
+  --lobe-neg: rgba(40, 80, 180, 0.18);
+  --s-orb: rgba(100, 160, 60, 0.15);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1em;
+}
+header {
+  width: 100%;
+  max-width: 840px;
+  border-bottom: 2px solid var(--ink);
+  padding: 0.8em 0 0.5em;
+  margin-bottom: 1em;
+}
+header .chapter {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+header h1 {
+  font-size: 1.45em;
+  font-weight: normal;
+  font-style: italic;
+}
+.main-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2em;
+  max-width: 1100px;
+  width: 100%;
+  justify-content: center;
+  align-items: flex-start;
+}
+.canvas-wrap {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  position: relative;
+}
+canvas {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+.panel {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  padding: 1.2em 1.4em;
+  min-width: 230px;
+  max-width: 260px;
+}
+.panel h2 {
+  font-size: 1em;
+  font-weight: bold;
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.3em;
+  margin-bottom: 0.8em;
+}
+.param-group { margin-bottom: 1.2em; }
+.param-group label {
+  display: block;
+  font-size: 0.88em;
+  color: var(--muted);
+  margin-bottom: 0.3em;
+}
+.param-group .slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.param-group input[type=range] {
+  flex: 1;
+  accent-color: var(--accent2);
+  height: 6px;
+}
+.param-group .val {
+  font-size: 0.88em;
+  font-weight: bold;
+  min-width: 2.5em;
+  text-align: right;
+  font-family: "Courier New", monospace;
+}
+.results { margin-top: 0.5em; }
+.results h2 { color: var(--accent2); }
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35em 0;
+  border-bottom: 1px dotted var(--rule);
+  font-size: 0.92em;
+}
+.result-row:last-child { border-bottom: none; }
+.result-row .label { color: var(--muted); }
+.result-row .value {
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 1em;
+}
+.result-row .value.pos { color: var(--accent); }
+.result-row .value.neg { color: var(--accent2); }
+.result-row .value.total { color: var(--ink); font-size: 1.15em; }
+.bar-container {
+  margin-top: 0.8em;
+  background: #f0ece4;
+  height: 18px;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--rule);
+}
+.bar-fill {
+  height: 100%;
+  position: absolute;
+  top: 0;
+  transition: width 0.15s, left 0.15s;
+}
+.bar-fill.pos-bar { background: rgba(200,40,30,0.5); left: 50%; }
+.bar-fill.neg-bar { background: rgba(30,80,180,0.5); }
+.bar-center {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink);
+}
+.coords {
+  margin-top: 1em;
+  font-size: 0.82em;
+  color: var(--muted);
+  text-align: center;
+  font-family: "Courier New", monospace;
+}
+button.reset {
+  display: block;
+  width: 100%;
+  margin-top: 1.2em;
+  padding: 0.6em;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95em;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: background 0.2s;
+}
+button.reset:hover { background: #963727; }
+.legend {
+  margin-top: 1em;
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.25em 0;
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+a.back {
+  display: inline-block;
+  margin-top: 1em;
+  font-size: 0.88em;
+  color: var(--accent2);
+}
+.main-container { max-width: 1250px; }
+header { max-width: 1180px; }
+canvas { max-width: 100%; height: auto; cursor: default; }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.85em;
+  color: var(--muted);
+  margin-bottom: 0.8em;
+  cursor: pointer;
+}
+.checkbox-row input { accent-color: var(--accent2); }
+.checkbox-row input:disabled + span { opacity: 0.45; }
+.atom-group {
+  border-left: 3px solid var(--rule);
+  padding-left: 0.7em;
+  margin-bottom: 1em;
+}
+.atom-group.atomA { border-left-color: #222; }
+.atom-group.atomB { border-left-color: #2a5d8f; }
+.atom-group h3 {
+  font-size: 0.9em;
+  margin-bottom: 0.4em;
+}
+.atom-group select {
+  font-family: inherit;
+  font-size: 0.9em;
+  padding: 0.15em 0.3em;
+  border: 1px solid var(--rule);
+  background: #fffef9;
+  color: var(--ink);
+  margin-bottom: 0.5em;
+}
+.panel { max-width: 260px; }
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--rule);
+}
+.stepper button {
+  width: 2em;
+  border: none;
+  background: #f0ece4;
+  color: var(--accent2);
+  font-family: inherit;
+  font-size: 1.05em;
+  font-weight: bold;
+  cursor: pointer;
+}
+.stepper button:hover:not(:disabled) { background: #e4ddd0; }
+.stepper button:disabled { color: var(--rule); cursor: default; }
+.stepper input {
+  width: 3em;
+  border: none;
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  text-align: center;
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: 0.95em;
+  color: var(--ink);
+  background: #fff;
+  -moz-appearance: textfield;
+}
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 46, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1em;
+  z-index: 10;
+}
+.zoom-overlay[hidden] { display: none; }
+.zoom-card {
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  padding: 1.2em 1.4em;
+  width: 100%;
+  max-width: 700px;
+}
+.zoom-card h2 {
+  font-size: 1.1em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.3em;
+  margin-bottom: 0.8em;
+}
+.zoom-card canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+}
+.zoom-info {
+  font-size: 0.92em;
+  margin-top: 0.6em;
+}
+.zoom-info .formula {
+  text-align: center;
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
+  background: #f0ece4;
+  border-left: 3px solid var(--accent2);
+  font-family: "Cambria Math", "Times New Roman", serif;
+}
+.hint {
+  margin-top: 0.8em;
+  font-size: 0.8em;
+  color: var(--muted);
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="chapter">Chimie quantique — Activité interactive</div>
+  <h1>Construire un diagramme d'orbitales moléculaires</h1>
+</header>
+
+<div class="main-container">
+
+  <div class="canvas-wrap">
+    <canvas id="cvs" width="900" height="820"></canvas>
+  </div>
+
+  <div class="panel">
+    <h2>Atomes</h2>
+
+    <div class="atom-group atomA">
+      <h3>Atome A (gauche)</h3>
+      <select id="selA"></select>
+      <label class="checkbox-row"><input type="checkbox" id="chkPA"><span>Orbitales p</span></label>
+      <div class="param-group">
+        <label>Nombre d'électrons</label>
+        <div class="stepper">
+          <button type="button" id="minusElA" aria-label="Retirer un électron">−</button>
+          <input type="number" id="numElA" min="0" max="2" step="1" value="1">
+          <button type="button" id="plusElA" aria-label="Ajouter un électron">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="atom-group atomB">
+      <h3>Atome B (droite)</h3>
+      <select id="selB"></select>
+      <label class="checkbox-row"><input type="checkbox" id="chkPB"><span>Orbitales p</span></label>
+      <div class="param-group">
+        <label>Nombre d'électrons</label>
+        <div class="stepper">
+          <button type="button" id="minusElB" aria-label="Retirer un électron">−</button>
+          <input type="number" id="numElB" min="0" max="2" step="1" value="1">
+          <button type="button" id="plusElB" aria-label="Ajouter un électron">+</button>
+        </div>
+      </div>
+    </div>
+
+    <h2>Distance</h2>
+    <div class="param-group">
+      <label>Distance A–B (Å)</label>
+      <div class="slider-row">
+        <input type="range" id="sliderR" min="1.00" max="4.00" step="0.01" value="1.00">
+        <span class="val" id="valR">1.00</span>
+      </div>
+    </div>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="chkOM" checked>
+      <span>Dessiner l'OM (sinon : les deux OA en interaction)</span>
+    </label>
+
+    <div class="results">
+      <h2>Résultats</h2>
+      <div class="result-row">
+        <span class="label">S(s<sub>A</sub>, s<sub>B</sub>)</span>
+        <span class="value" id="resSss">0.000</span>
+      </div>
+      <div class="result-row">
+        <span class="label">S(p<sub>z</sub>, p<sub>z</sub>)</span>
+        <span class="value" id="resSzz">—</span>
+      </div>
+      <div class="result-row">
+        <span class="label">S(p<sub>x</sub>, p<sub>x</sub>)</span>
+        <span class="value" id="resSxx">—</span>
+      </div>
+      <div class="result-row" style="margin-top:0.4em; padding-top:0.5em; border-top:2px solid var(--rule);">
+        <span class="label"><strong>Indice de liaison</strong></span>
+        <span class="value total" id="resBO">0</span>
+      </div>
+    </div>
+
+    <div class="hint">Faire glisser un des axes d'énergie latéralement pour rapprocher ou éloigner les atomes. Cliquer sur une orbitale pour l'agrandir.</div>
+
+    <button class="reset" id="btnReset">Réinitialiser</button>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(200,60,40,0.35); border-color:rgba(200,60,40,0.75)"></div>
+        <span>Fonction &gt; 0</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(40,80,180,0.35); border-color:rgba(40,80,180,0.75)"></div>
+        <span>Fonction &lt; 0</span>
+      </div>
+      <div class="legend-item">
+        <span style="width:14px; text-align:center; font-weight:bold;">*</span>
+        <span>OM antiliante ; « nl » : non liante</span>
+      </div>
+    </div>
+
+    <a href="index.html" class="back">← Retour à l'introduction</a>
+  </div>
+
+</div>
+
+<div class="zoom-overlay" id="zoom" hidden>
+  <div class="zoom-card">
+    <h2 id="zoomTitle"></h2>
+    <canvas id="zoomCvs" width="640" height="380"></canvas>
+    <div class="zoom-info" id="zoomInfo"></div>
+    <button class="reset" id="zoomClose">Fermer</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* =============================================================
+   PARAMÈTRES GLOBAUX — facilement modifiables
+   ============================================================= */
+const CONFIG = {
+  canvasW: 900,
+  canvasH: 820,
+
+  // Zone verticale du diagramme (pixels)
+  plotTop: 40,
+  plotBottom: 740,
+
+  // Écart entre les axes (pixels) <-> distance (Å), relation linéaire
+  sepMin: 520,
+  sepMax: 810,
+  Rmin: 1.00,
+  Rmax: 4.00,
+  defaultR: 1.00,
+
+  // Énergies affichées : de 1.4 × (α le plus bas) jusqu'à Emax (eV)
+  EminFactor: 1.4,
+  Emax: 10,
+
+  // Hückel étendu : H_AB = K · S_AB · (α_A + α_B) / 2
+  K: 1.75,
+
+  // Cases quantiques et dessins d'orbitales
+  boxW: 22,
+  boxH: 24,
+  glyphW: 150,
+  glyphH: 70,
+  glyphGap: 4,
+  elementGap: 10,          // espace vertical minimal entre deux niveaux
+  isoFraction: 0.2,        // contour à 20 % du maximum de |ψ|
+  aoOffset: 88,            // distance axe -> centre de la colonne des OA
+  pGlyphSpacing: 52,       // espacement des vignettes p_z, p_x, p_y
+  pGlyphScale: 0.7,        // échelle réduite de ces vignettes
+
+  // Fenêtre d'agrandissement
+  zoomW: 640,
+  zoomH: 380,
+
+  // Intégration du recouvrement (coordonnées elliptiques)
+  nMu: 80,
+  nNu: 48,
+
+  // Seuil « non liant » : fraction de l'OM portée par l'atome minoritaire
+  nonBondingFraction: 0.08,
+};
+
+const BOHR = 0.529177; // Å
+
+/* Paramètres de Hückel étendu (énergies en eV, exposants de Slater en bohr⁻¹) */
+const ELEMENTS = {
+  H:  { n: 1, zs: 1.300, as: -13.6, p: null, ve: 1 },
+  He: { n: 1, zs: 1.688, as: -24.6, p: null, ve: 2 },
+  Li: { n: 2, zs: 0.650, as: -5.4,  p: { zp: 0.650, ap: -3.5 },  ve: 1 },
+  Be: { n: 2, zs: 0.975, as: -10.0, p: { zp: 0.975, ap: -6.0 },  ve: 2 },
+  B:  { n: 2, zs: 1.300, as: -15.2, p: { zp: 1.300, ap: -8.5 },  ve: 3 },
+  C:  { n: 2, zs: 1.625, as: -21.4, p: { zp: 1.625, ap: -11.4 }, ve: 4 },
+  N:  { n: 2, zs: 1.950, as: -26.0, p: { zp: 1.950, ap: -13.4 }, ve: 5 },
+  O:  { n: 2, zs: 2.275, as: -32.3, p: { zp: 2.275, ap: -14.8 }, ve: 6 },
+  F:  { n: 2, zs: 2.425, as: -40.0, p: { zp: 2.425, ap: -18.1 }, ve: 7 },
+};
+
+const COL_POS = [200, 60, 40];
+const COL_NEG = [40, 80, 180];
+
+/* =============================================================
+   ÉTAT
+   ============================================================= */
+let state = {
+  atoms: [
+    { el: "H", p: false, ne: 1 },
+    { el: "H", p: false, ne: 1 },
+  ],
+  R: CONFIG.defaultR,   // Å
+  showMO: true,
+  dragging: false,
+};
+
+/* =============================================================
+   ÉLÉMENTS DOM
+   ============================================================= */
+const cvs = document.getElementById("cvs");
+const ctx = cvs.getContext("2d");
+const ui = [0, 1].map(i => {
+  const s = i === 0 ? "A" : "B";
+  return {
+    sel: document.getElementById("sel" + s),
+    chkP: document.getElementById("chkP" + s),
+    num: document.getElementById("numEl" + s),
+    minus: document.getElementById("minusEl" + s),
+    plus: document.getElementById("plusEl" + s),
+  };
+});
+const sliderR = document.getElementById("sliderR");
+const valR = document.getElementById("valR");
+const chkOM = document.getElementById("chkOM");
+const resSss = document.getElementById("resSss");
+const resSzz = document.getElementById("resSzz");
+const resSxx = document.getElementById("resSxx");
+const resBO = document.getElementById("resBO");
+const btnReset = document.getElementById("btnReset");
+const zoomEl = document.getElementById("zoom");
+const zoomTitle = document.getElementById("zoomTitle");
+const zoomCvs = document.getElementById("zoomCvs");
+const zctx = zoomCvs.getContext("2d");
+const zoomInfo = document.getElementById("zoomInfo");
+const zoomClose = document.getElementById("zoomClose");
+
+/* =============================================================
+   ORBITALES DE SLATER
+   ============================================================= */
+const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320];
+
+/** Partie radiale normalisée r^(n-1) e^(-ζr) */
+function radialNorm(n, zeta) {
+  return Math.pow(2 * zeta, n + 0.5) / Math.sqrt(FACT[2 * n]);
+}
+
+const Y_S = 1 / Math.sqrt(4 * Math.PI);
+const Y_P = Math.sqrt(3 / (4 * Math.PI));
+
+/**
+ * Valeur d'une orbitale de base en un point (dx = composante x, dz = composante z
+ * par rapport au noyau). type : "s", "pz" (axe internucléaire) ou "px".
+ */
+function chi(f, dx, dz) {
+  const r = Math.sqrt(dx * dx + dz * dz);
+  const rad = f.N * Math.pow(r, f.n - 1) * Math.exp(-f.zeta * r);
+  if (f.type === "s") return rad * Y_S;
+  if (r < 1e-12) return 0;
+  return rad * Y_P * (f.type === "pz" ? dz : dx) / r;
+}
+
+/* =============================================================
+   INTÉGRALE DE RECOUVREMENT 3D
+   Coordonnées elliptiques : μ = (rA + rB)/R, ν = (rA − rB)/R
+   Quadrature de Gauss–Legendre sur ν ∈ [−1, 1] et μ ∈ [1, μmax]
+   ============================================================= */
+function gaussLegendre(n) {
+  const x = new Float64Array(n), w = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let z = Math.cos(Math.PI * (i + 0.75) / (n + 0.5)), pp = 0;
+    for (let it = 0; it < 100; it++) {
+      let p1 = 1, p2 = 0;
+      for (let j = 1; j <= n; j++) {
+        const p3 = p2; p2 = p1;
+        p1 = ((2 * j - 1) * z * p2 - (j - 1) * p3) / j;
+      }
+      pp = n * (z * p1 - p2) / (z * z - 1);
+      const dz = p1 / pp;
+      z -= dz;
+      if (Math.abs(dz) < 1e-15) break;
+    }
+    x[i] = z;
+    w[i] = 2 / ((1 - z * z) * pp * pp);
+  }
+  return { x, w };
+}
+const GL_MU = gaussLegendre(CONFIG.nMu);
+const GL_NU = gaussLegendre(CONFIG.nNu);
+
+/** Recouvrement ⟨fa(A) | fb(B)⟩, A en z = 0, B en z = R (bohr) */
+function overlap(fa, fb, R) {
+  const piType = fa.type === "px";
+  if (piType !== (fb.type === "px")) return 0;   // σ et π sont orthogonales
+  const h = R / 2;
+  const muMax = 1 + 60 / (h * Math.min(fa.zeta, fb.zeta) + 1e-9);
+  const halfMu = (muMax - 1) / 2, midMu = (muMax + 1) / 2;
+  let sum = 0;
+  for (let i = 0; i < CONFIG.nMu; i++) {
+    const mu = midMu + halfMu * GL_MU.x[i];
+    const wMu = halfMu * GL_MU.w[i];
+    for (let j = 0; j < CONFIG.nNu; j++) {
+      const nu = GL_NU.x[j];
+      const rho = h * Math.sqrt(Math.max(0, (mu * mu - 1) * (1 - nu * nu)));
+      const zA = h * (mu * nu + 1);
+      const zB = zA - R;
+      const jac = h * h * h * (mu * mu - nu * nu);
+      // On intègre dans le plan φ = 0 (x = ρ) puis on multiplie par le facteur azimutal
+      sum += wMu * GL_NU.w[j] * jac * chi(fa, rho, zA) * chi(fb, rho, zB);
+    }
+  }
+  return sum * (piType ? Math.PI : 2 * Math.PI);
+}
+
+/* =============================================================
+   ALGÈBRE LINÉAIRE (petites matrices symétriques)
+   ============================================================= */
+function jacobiEigen(A0) {
+  const n = A0.length;
+  const A = A0.map(r => r.slice());
+  const V = A.map((r, i) => r.map((_, j) => (i === j ? 1 : 0)));
+  for (let sweep = 0; sweep < 100; sweep++) {
+    let off = 0;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += A[p][q] * A[p][q];
+    if (off < 1e-22) break;
+    for (let p = 0; p < n; p++) {
+      for (let q = p + 1; q < n; q++) {
+        if (Math.abs(A[p][q]) < 1e-15) continue;
+        const theta = (A[q][q] - A[p][p]) / (2 * A[p][q]);
+        const t = Math.sign(theta || 1) / (Math.abs(theta) + Math.sqrt(theta * theta + 1));
+        const c = 1 / Math.sqrt(t * t + 1), s = t * c;
+        for (let k = 0; k < n; k++) {
+          const akp = A[k][p], akq = A[k][q];
+          A[k][p] = c * akp - s * akq;
+          A[k][q] = s * akp + c * akq;
+        }
+        for (let k = 0; k < n; k++) {
+          const apk = A[p][k], aqk = A[q][k];
+          A[p][k] = c * apk - s * aqk;
+          A[q][k] = s * apk + c * aqk;
+        }
+        for (let k = 0; k < n; k++) {
+          const vkp = V[k][p], vkq = V[k][q];
+          V[k][p] = c * vkp - s * vkq;
+          V[k][q] = s * vkp + c * vkq;
+        }
+      }
+    }
+  }
+  return { values: A.map((r, i) => r[i]), vectors: V };  // vecteurs en colonnes
+}
+
+function matMul(A, B) {
+  return A.map(r => B[0].map((_, j) => r.reduce((s, a, k) => s + a * B[k][j], 0)));
+}
+
+/** Résout HC = SCE (orthogonalisation de Löwdin). Retourne [{E, c}] triés. */
+function solveGeneralized(H, S) {
+  const n = H.length;
+  const es = jacobiEigen(S);
+  const X = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => {
+    let v = 0;
+    for (let k = 0; k < n; k++) v += es.vectors[i][k] * es.vectors[j][k] / Math.sqrt(es.values[k]);
+    return v;
+  }));
+  const Hp = matMul(matMul(X, H), X);
+  const eh = jacobiEigen(Hp);
+  const C = matMul(X, eh.vectors);
+  return eh.values
+    .map((E, k) => ({ E, c: C.map(r => r[k]) }))
+    .sort((a, b) => a.E - b.E);
+}
+
+/* =============================================================
+   CONSTRUCTION DE LA BASE ET CALCUL DES OM
+   ============================================================= */
+function basisOf(atomIdx) {
+  const a = state.atoms[atomIdx];
+  const e = ELEMENTS[a.el];
+  const list = [{ atom: atomIdx, type: "s", n: e.n, zeta: e.zs, alpha: e.as }];
+  if (a.p && e.p) {
+    list.push({ atom: atomIdx, type: "pz", n: 2, zeta: e.p.zp, alpha: e.p.ap });
+    list.push({ atom: atomIdx, type: "px", n: 2, zeta: e.p.zp, alpha: e.p.ap });
+  }
+  for (const f of list) f.N = radialNorm(f.n, f.zeta);
+  return list;
+}
+
+/** Bloc de symétrie : matrices S et H, puis résolution */
+function solveBlock(funcs, Rb) {
+  const n = funcs.length;
+  const S = [], H = [];
+  for (let i = 0; i < n; i++) {
+    S.push([]); H.push([]);
+    for (let j = 0; j < n; j++) {
+      let s;
+      if (i === j) s = 1;
+      else if (funcs[i].atom === funcs[j].atom) s = 0;
+      else {
+        const [fa, fb] = funcs[i].atom === 0 ? [funcs[i], funcs[j]] : [funcs[j], funcs[i]];
+        s = overlap(fa, fb, Rb);
+      }
+      S[i].push(s);
+      H[i].push(i === j ? funcs[i].alpha : CONFIG.K * s * (funcs[i].alpha + funcs[j].alpha) / 2);
+    }
+  }
+  return { S, sols: solveGeneralized(H, S) };
+}
+
+/**
+ * Caractère liant : Σ c_i c_j · signe(S_ij) sur les couples (i sur A, j sur B).
+ * Chaque couple d'OA compte pour +1 s'il est combiné « en phase » (recouvrement
+ * positif), −1 sinon, quelle que soit la valeur de S. Pour une molécule
+ * homonucléaire, c'est la parité : σg et πu liantes, σu et πg antiliantes.
+ * (Utilisé pour les molécules homonucléaires uniquement.)
+ */
+function phaseBonding(funcs, c, S) {
+  let sum = 0;
+  funcs.forEach((fi, i) => {
+    funcs.forEach((fj, j) => {
+      if (fi.atom === 0 && fj.atom === 1 && Math.abs(S[i][j]) > 1e-12) {
+        sum += c[i] * c[j] * Math.sign(S[i][j]);
+      }
+    });
+  });
+  return sum > 0;
+}
+
+function computeMOs() {
+  const Rb = state.R / BOHR;
+  const homonuclear = state.atoms[0].el === state.atoms[1].el && state.atoms[0].p === state.atoms[1].p;
+  const bA = basisOf(0), bB = basisOf(1);
+  const sigma = [...bA, ...bB].filter(f => f.type !== "px");
+  const pi = [...bA, ...bB].filter(f => f.type === "px");
+
+  const mos = [];
+  const blocks = [{ funcs: sigma, sym: "σ", deg: 1 }];
+  if (pi.length) blocks.push({ funcs: pi, sym: "π", deg: 2 });
+
+  for (const blk of blocks) {
+    const { S, sols } = solveBlock(blk.funcs, Rb);
+    for (const sol of sols) {
+      // Signe canonique : le plus grand coefficient de A positif (sinon celui de B)
+      let ref = 0, best = -1;
+      blk.funcs.forEach((f, i) => {
+        const w = Math.abs(sol.c[i]) + (f.atom === 0 ? 1 : 0);
+        if (w > best) { best = w; ref = i; }
+      });
+      const c = sol.c.map(v => (sol.c[ref] < 0 ? -v : v));
+
+      // Poids de l'OM sur chaque atome, sur les OA s / p et sur chaque OA (Mulliken)
+      let wA = 0, wB = 0, wS = 0, wP = 0;
+      const wAO = blk.funcs.map(() => 0);
+      blk.funcs.forEach((fi, i) => {
+        blk.funcs.forEach((fj, j) => {
+          const t = c[i] * c[j] * S[i][j];
+          wAO[i] += t;
+          if (fi.atom === 0) wA += t; else wB += t;
+          if (fi.type === "s") wS += t; else wP += t;
+        });
+      });
+      const minor = Math.min(wA, wB) / (wA + wB);
+      let kind;
+      if (minor < CONFIG.nonBondingFraction) kind = "nl";
+      else if (homonuclear) kind = phaseBonding(blk.funcs, c, S) ? "liant" : "antiliant";
+      else {
+        // Hétéronucléaire : liante si l'OM est stabilisée par rapport à la moyenne
+        // des énergies des OA qui la composent, pondérée par leurs poids
+        const Eref = wAO.reduce((sum, w, i) => sum + w * blk.funcs[i].alpha, 0);
+        kind = sol.E < Eref ? "liant" : "antiliant";
+      }
+      mos.push({ minor, E: sol.E, c, funcs: blk.funcs, sym: blk.sym, deg: blk.deg, kind,
+                 sub: blk.sym === "σ" ? (wS >= wP ? "s" : "p") : "" });
+    }
+  }
+  mos.sort((a, b) => a.E - b.E);
+
+  // Noms ; indice numérique seulement si deux OM portent le même nom
+  const counts = {};
+  for (const mo of mos) {
+    mo.base = mo.sym + (mo.kind === "antiliant" ? "*" : "");
+    mo.key = mo.base + mo.sub + mo.kind;
+    counts[mo.key] = (counts[mo.key] || 0) + 1;
+  }
+  const seen = {};
+  for (const mo of mos) {
+    seen[mo.key] = (seen[mo.key] || 0) + 1;
+    mo.index = counts[mo.key] > 1 ? seen[mo.key] : 0;
+  }
+
+  // Recouvrements de référence pour l'affichage
+  const sA = bA[0], sB = bB[0];
+  const ref = { sss: overlap(sA, sB, Rb), szz: null, sxx: null };
+  const pzA = bA.find(f => f.type === "pz"), pzB = bB.find(f => f.type === "pz");
+  if (pzA && pzB) {
+    ref.szz = overlap(pzA, pzB, Rb);
+    ref.sxx = overlap(bA.find(f => f.type === "px"), bB.find(f => f.type === "px"), Rb);
+  }
+  return { mos, bA, bB, ref };
+}
+
+/* =============================================================
+   REMPLISSAGE ÉLECTRONIQUE (Aufbau + Hund)
+   ============================================================= */
+/** groups : [{nBoxes, E}] ; renvoie pour chaque groupe un tableau d'occupations par case */
+function fill(groups, nElectrons) {
+  const order = groups.map((g, i) => i).sort((a, b) => groups[a].E - groups[b].E);
+  const occ = groups.map(g => new Array(g.nBoxes).fill(0));
+  let left = nElectrons;
+  for (const gi of order) {
+    const g = groups[gi];
+    const k = Math.min(left, 2 * g.nBoxes);
+    for (let e = 0; e < k; e++) occ[gi][e % g.nBoxes] += 1;  // Hund : une par case d'abord
+    left -= k;
+    if (left <= 0) break;
+  }
+  return occ;
+}
+
+/* =============================================================
+   CONVERSIONS
+   ============================================================= */
+function sepFromR(R) {
+  return CONFIG.sepMin + (R - CONFIG.Rmin) / (CONFIG.Rmax - CONFIG.Rmin) * (CONFIG.sepMax - CONFIG.sepMin);
+}
+function RFromSep(sep) {
+  return CONFIG.Rmin + (sep - CONFIG.sepMin) / (CONFIG.sepMax - CONFIG.sepMin) * (CONFIG.Rmax - CONFIG.Rmin);
+}
+function axesX() {
+  const sep = sepFromR(state.R);
+  return [CONFIG.canvasW / 2 - sep / 2, CONFIG.canvasW / 2 + sep / 2];
+}
+function energyRange() {
+  let lo = 0;
+  for (const i of [0, 1]) {
+    const e = ELEMENTS[state.atoms[i].el];
+    lo = Math.min(lo, e.as);
+  }
+  return [CONFIG.EminFactor * lo, CONFIG.Emax];
+}
+function yOfE(E, range) {
+  const [Emin, Emax] = range;
+  return CONFIG.plotTop + (Emax - E) / (Emax - Emin) * (CONFIG.plotBottom - CONFIG.plotTop);
+}
+
+/**
+ * Écarte verticalement des éléments trop proches en déplaçant le moins possible
+ * (régression isotone, algorithme PAV). items : [{y}], height : hauteur occupée.
+ */
+function relax(items, height) {
+  const order = items.map((_, i) => i).sort((a, b) => items[a].y - items[b].y);
+  const target = order.map((i, k) => items[i].y - k * height);
+  const blocks = [];
+  for (let k = 0; k < target.length; k++) {
+    blocks.push({ sum: target[k], n: 1 });
+    while (blocks.length > 1) {
+      const b = blocks[blocks.length - 1], a = blocks[blocks.length - 2];
+      if (a.sum / a.n <= b.sum / b.n) break;
+      a.sum += b.sum; a.n += b.n;
+      blocks.pop();
+    }
+  }
+  const fitted = [];
+  for (const b of blocks) for (let k = 0; k < b.n; k++) fitted.push(b.sum / b.n);
+  let ys = fitted.map((v, k) => v + k * height);
+  // Garder l'ensemble dans la zone de tracé
+  const lowLimit = CONFIG.canvasH - 50 - (height - CONFIG.boxH / 2);
+  if (ys.length) {
+    if (ys[0] < CONFIG.plotTop) ys = ys.map(v => v + CONFIG.plotTop - ys[0]);
+    const last = ys[ys.length - 1];
+    if (last > lowLimit) ys = ys.map(v => v - (last - lowLimit));
+  }
+  order.forEach((i, k) => { items[i].yDisp = ys[k]; });
+}
+
+/* =============================================================
+   DESSIN DES ORBITALES (petites vignettes)
+   ============================================================= */
+let hitRects = [];   // zones cliquables (vignettes) du dernier dessin
+const glyphCvs = document.createElement("canvas");
+const glyphCtx = glyphCvs.getContext("2d");
+
+/** Rayon (bohr) du contour à isoFraction du maximum, avec une petite marge */
+function orbitalExtent(f) {
+  return (f.n === 1 ? 1.9 : 4.2) / f.zeta;
+}
+
+/** Échelle commune des vignettes (pixels par bohr) */
+function glyphScale(bA, bB) {
+  let ext = 0;
+  for (const f of [...bA, ...bB]) ext = Math.max(ext, orbitalExtent(f));
+  return CONFIG.glyphH / (2 * ext);
+}
+
+/**
+ * Dessine une fonction (somme de termes c·χ centrés en zc) dans un rectangle
+ * (x0, y0, w, h) ; zc et l'origine en bohr, centre du rectangle = zMid.
+ */
+function drawFunction(tctx, terms, x0, y0, w, h, scale, zMid, thr) {
+  glyphCvs.width = w; glyphCvs.height = h;
+  const img = glyphCtx.createImageData(w, h);
+  const vals = new Float32Array(w * h);
+  for (let j = 0; j < h; j++) {
+    const x = (h / 2 - j - 0.5) / scale;
+    for (let i = 0; i < w; i++) {
+      const z = zMid + (i + 0.5 - w / 2) / scale;
+      let v = 0;
+      for (const t of terms) v += t.c * chi(t.f, x, z - t.zc);
+      vals[j * w + i] = v;
+    }
+  }
+  const sgn = v => (v > thr ? 1 : v < -thr ? -1 : 0);
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      const k = j * w + i, s = sgn(vals[k]);
+      if (!s) continue;
+      const edge = (i === 0 || j === 0 || i === w - 1 || j === h - 1)
+        || sgn(vals[k - 1]) !== s || sgn(vals[k + 1]) !== s
+        || sgn(vals[k - w]) !== s || sgn(vals[k + w]) !== s;
+      const col = s > 0 ? COL_POS : COL_NEG;
+      img.data[4 * k] = col[0]; img.data[4 * k + 1] = col[1]; img.data[4 * k + 2] = col[2];
+      img.data[4 * k + 3] = edge ? 190 : 80;
+    }
+  }
+  glyphCtx.putImageData(img, 0, 0);
+  tctx.drawImage(glyphCvs, Math.round(x0), Math.round(y0));
+}
+
+function maxAbs(terms, w, h, scale, zMid) {
+  let m = 0;
+  for (let j = 0; j < h; j += 2) {
+    const x = (h / 2 - j - 0.5) / scale;
+    for (let i = 0; i < w; i += 2) {
+      const z = zMid + (i + 0.5 - w / 2) / scale;
+      let v = 0;
+      for (const t of terms) v += t.c * chi(t.f, x, z - t.zc);
+      m = Math.max(m, Math.abs(v));
+    }
+  }
+  return m;
+}
+
+function drawNucleus(tctx, x, y, color, r = 2) {
+  tctx.beginPath();
+  tctx.arc(x, y, r, 0, 2 * Math.PI);
+  tctx.fillStyle = color;
+  tctx.fill();
+}
+
+/** Dessin d'une OA seule, centré en (cx, y0 + h/2) */
+function drawAOGlyph(tctx, f, cx, y0, w, h, scale, rNuc = 2) {
+  if (f.type === "py") {
+    // p_y : axe perpendiculaire au plan du dessin
+    tctx.strokeStyle = "rgba(0,0,0,0.45)";
+    tctx.lineWidth = 1.2;
+    tctx.beginPath(); tctx.arc(cx, y0 + h / 2, 7, 0, 2 * Math.PI); tctx.stroke();
+    tctx.beginPath(); tctx.arc(cx, y0 + h / 2, 1.8, 0, 2 * Math.PI);
+    tctx.fillStyle = "rgba(0,0,0,0.6)"; tctx.fill();
+    return;
+  }
+  const terms = [{ c: 1, f, zc: 0 }];
+  const thr = CONFIG.isoFraction * maxAbs(terms, w, h, scale, 0);
+  drawFunction(tctx, terms, cx - w / 2, y0, w, h, scale, 0, thr);
+  drawNucleus(tctx, cx, y0 + h / 2, f.atom === 1 ? "#2a5d8f" : "#222", rNuc);
+}
+
+/** Termes c·χ de l'OM portés par un atome (centrés à leur position réelle) */
+function moPart(mo, atom) {
+  const Rb = state.R / BOHR;
+  return mo.funcs
+    .map((f, i) => ({ c: mo.c[i], f, zc: atom === 0 ? 0 : Rb }))
+    .filter(t => t.f.atom === atom);
+}
+
+/**
+ * Dessin d'une OM dans le rectangle centré en cx, de hauteur h à partir de y0 :
+ * contour de l'OM, ou les deux OA pondérées côte à côte (selon la case à cocher)
+ */
+function drawMOGlyph(tctx, mo, cx, y0, w, h, scale, rNuc = 2) {
+  const Rb = state.R / BOHR;
+  if (state.showMO) {
+    // Échelle réduite si la molécule ne tient pas dans le rectangle
+    let ext = 0;
+    for (const f of mo.funcs) ext = Math.max(ext, orbitalExtent(f));
+    const sc = Math.min(scale, w / (Rb + 2 * ext));
+    const terms = [...moPart(mo, 0), ...moPart(mo, 1)];
+    const thr = CONFIG.isoFraction * maxAbs(terms, w, h, sc, Rb / 2);
+    drawFunction(tctx, terms, cx - w / 2, y0, w, h, sc, Rb / 2, thr);
+    drawNucleus(tctx, cx - Rb / 2 * sc, y0 + h / 2, "#222", rNuc);
+    drawNucleus(tctx, cx + Rb / 2 * sc, y0 + h / 2, "#2a5d8f", rNuc);
+  } else {
+    // Chaque OA (pondérée par son coefficient) dans sa moitié de rectangle
+    const half = Math.floor(w / 2);
+    const parts = [0, 1].map(a => moPart(mo, a).map(t => ({ ...t, zc: 0 })));
+    const thr = CONFIG.isoFraction * Math.max(...parts.map(p => maxAbs(p, half, h, scale, 0)));
+    parts.forEach((p, a) => {
+      const x0 = cx - half + a * half;
+      if (p.length && thr > 0) drawFunction(tctx, p, x0, y0, half, h, scale, 0, thr);
+      drawNucleus(tctx, x0 + half / 2, y0 + h / 2, a === 0 ? "#222" : "#2a5d8f", rNuc);
+    });
+  }
+}
+
+/* =============================================================
+   CASES QUANTIQUES
+   ============================================================= */
+function drawArrow(x, yTop, yBot, up) {
+  ctx.strokeStyle = "#1a1a2e";
+  ctx.fillStyle = "#1a1a2e";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, yTop + 3); ctx.lineTo(x, yBot - 3); ctx.stroke();
+  const tip = up ? yTop + 2 : yBot - 2, d = up ? 5 : -5;
+  ctx.beginPath();
+  ctx.moveTo(x, tip); ctx.lineTo(x - 3.5, tip + d); ctx.lineTo(x + 3.5, tip + d);
+  ctx.closePath(); ctx.fill();
+}
+
+/** Dessine nBoxes cases centrées en (cx, cy) ; renvoie [xGauche, xDroite] */
+function drawBoxes(cx, cy, occ) {
+  const { boxW, boxH } = CONFIG;
+  const n = occ.length;
+  const x0 = cx - n * boxW / 2;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(x0, cy - boxH / 2, n * boxW, boxH);
+  ctx.strokeStyle = "#1a1a2e";
+  ctx.lineWidth = 1.2;
+  for (let k = 0; k < n; k++) {
+    const bx = x0 + k * boxW;
+    ctx.strokeRect(bx, cy - boxH / 2, boxW, boxH);
+    if (occ[k] >= 1) drawArrow(bx + (occ[k] === 2 ? 7 : boxW / 2), cy - boxH / 2, cy + boxH / 2, true);
+    if (occ[k] === 2) drawArrow(bx + 15, cy - boxH / 2, cy + boxH / 2, false);
+  }
+  return [x0, x0 + n * boxW];
+}
+
+/** Nom d'OM : σ, σ*, π, π* avec indice (s, p) et mention « nl » */
+function drawMOName(mo, x, y) {
+  ctx.fillStyle = "rgba(255,254,249,0.85)";
+  ctx.fillRect(x - 2, y - 9, 66, 34);
+  ctx.textAlign = "left";
+  ctx.fillStyle = mo.kind === "antiliant" ? "#b8432f" : "#1a1a2e";
+  ctx.font = "bold 15px 'Palatino Linotype', Georgia, serif";
+  let label = mo.sym + (mo.kind === "antiliant" ? "*" : "");
+  if (mo.index) label = mo.index + label;
+  ctx.fillText(label, x, y + 5);
+  let xx = x + ctx.measureText(label).width + 1;
+  ctx.font = "italic 11px 'Palatino Linotype', Georgia, serif";
+  if (mo.sub) { ctx.fillText(mo.sub, xx, y + 9); xx += ctx.measureText(mo.sub).width + 2; }
+  if (mo.kind === "nl") { ctx.fillText("nl", xx + 2, y + 9); }
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.font = "11px 'Courier New', monospace";
+  const Etxt = (mo.E >= 0 ? "+" : "−") + Math.abs(mo.E).toFixed(1) + " eV";
+  ctx.fillText(Etxt, x, y + 21);
+}
+
+/* =============================================================
+   DESSIN PRINCIPAL
+   ============================================================= */
+function draw(data) {
+  const { mos, bA, bB } = data;
+  const W = CONFIG.canvasW, H = CONFIG.canvasH;
+  const range = energyRange();
+  const [xL, xR] = axesX();
+  const cx = W / 2;
+  const scale = glyphScale(bA, bB);
+  const elemH = CONFIG.boxH / 2 + CONFIG.glyphGap + CONFIG.glyphH + CONFIG.boxH / 2 + CONFIG.elementGap;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = "#fffef9";
+  ctx.fillRect(0, 0, W, H);
+  hitRects = [];
+
+  // Axes : seule la référence E = 0 est graduée (l'échelle n'est pas respectée
+  // exactement, les niveaux étant écartés pour laisser la place aux dessins)
+  {
+    const y = yOfE(0, range);
+    ctx.font = "12px 'Courier New', monospace";
+    ctx.strokeStyle = "rgba(0,0,0,0.04)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xL, y); ctx.lineTo(xR, y); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath(); ctx.moveTo(xL - 4, y); ctx.lineTo(xL, y); ctx.moveTo(xR, y); ctx.lineTo(xR + 4, y); ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.textAlign = "right"; ctx.fillText("0", xL - 6, y + 4);
+    ctx.textAlign = "left"; ctx.fillText("0", xR + 6, y + 4);
+  }
+  for (const [x, col] of [[xL, "#222"], [xR, "#2a5d8f"]]) {
+    ctx.strokeStyle = state.dragging ? "rgba(42,93,143,0.6)" : "rgba(0,0,0,0.3)";
+    ctx.lineWidth = state.dragging ? 2.5 : 1.5;
+    ctx.beginPath(); ctx.moveTo(x, CONFIG.plotBottom + 10); ctx.lineTo(x, CONFIG.plotTop - 18); ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath();
+    ctx.moveTo(x, CONFIG.plotTop - 24); ctx.lineTo(x - 4, CONFIG.plotTop - 15); ctx.lineTo(x + 4, CONFIG.plotTop - 15);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.fillText("E (eV)", x, CONFIG.plotTop - 28);
+  }
+
+  // Étiquettes des atomes et poignées de déplacement
+  state.atoms.forEach((a, i) => {
+    const x = i === 0 ? xL : xR;
+    const col = i === 0 ? "#222" : "#2a5d8f";
+    const y = CONFIG.plotBottom + 34;
+    ctx.beginPath(); ctx.arc(x, y, 15, 0, 2 * Math.PI);
+    ctx.fillStyle = col; ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 14px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.fillText(a.el, x, y + 5);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.font = "14px 'Palatino Linotype', Georgia, serif";
+    ctx.fillText("◂", x - 26, y + 5);
+    ctx.fillText("▸", x + 26, y + 5);
+  });
+  // Distance
+  const yDist = CONFIG.plotBottom + 34;
+  ctx.strokeStyle = "rgba(42,93,143,0.5)";
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(xL + 40, yDist); ctx.lineTo(xR - 40, yDist); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#fffef9";
+  ctx.fillRect(cx - 52, yDist - 10, 104, 20);
+  ctx.fillStyle = "#2a5d8f";
+  ctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText("R = " + state.R.toFixed(2) + " Å", cx, yDist + 4);
+
+  // ---------- OA de chaque atome ----------
+  const aoItems = [];
+  [bA, bB].forEach((basis, i) => {
+    const a = state.atoms[i];
+    const x = i === 0 ? xL + CONFIG.aoOffset : xR - CONFIG.aoOffset;
+    const e = ELEMENTS[a.el];
+    const groups = [{ nBoxes: 1, E: e.as, type: "s", f: basis[0] }];
+    if (basis.length > 1) groups.push({ nBoxes: 3, E: e.p.ap, type: "p", f: basis[1], fx: basis[2] });
+    const occ = fill(groups, a.ne);
+    const items = groups.map((g, k) => ({ ...g, occ: occ[k], x, atom: i, y: yOfE(g.E, range) }));
+    relax(items, elemH);
+    aoItems.push(...items);
+  });
+
+  // ---------- OM ----------
+  const moGroups = mos.map(mo => ({ nBoxes: mo.deg, E: mo.E }));
+  const moOcc = fill(moGroups, state.atoms[0].ne + state.atoms[1].ne);
+  const moItems = mos.map((mo, k) => {
+    return { mo, occ: moOcc[k], y: Math.max(CONFIG.plotTop, yOfE(mo.E, range)) };
+  });
+  relax(moItems, elemH);
+
+  // Lignes de corrélation (OA -> OM), sous les cases
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  for (const it of moItems) {
+    const half = it.mo.deg * CONFIG.boxW / 2;
+    for (const ao of aoItems) {
+      // poids de l'OA dans l'OM
+      let w = 0;
+      it.mo.funcs.forEach((f, i) => {
+        if (f.atom === ao.atom && (ao.type === "s" ? f.type === "s" : f.type !== "s")) w += it.mo.c[i] * it.mo.c[i];
+      });
+      if (w < 0.03) continue;
+      const aoHalf = ao.nBoxes * CONFIG.boxW / 2;
+      const xa = ao.atom === 0 ? ao.x + aoHalf : ao.x - aoHalf;
+      const xm = ao.atom === 0 ? cx - half : cx + half;
+      ctx.strokeStyle = `rgba(0,0,0,${Math.min(0.45, 0.12 + 0.35 * w)})`;
+      ctx.beginPath(); ctx.moveTo(xa, ao.yDisp); ctx.lineTo(xm, it.yDisp); ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // Cases et vignettes des OA
+  for (const ao of aoItems) {
+    const [x0, x1] = drawBoxes(ao.x, ao.yDisp, ao.occ);
+    const gy = ao.yDisp + CONFIG.boxH / 2 + CONFIG.glyphGap;
+    if (ao.type === "s") {
+      const gw = CONFIG.glyphW / 2 + 16;
+      drawAOGlyph(ctx, ao.f, ao.x, gy, gw, CONFIG.glyphH, scale);
+      hitRects.push({ x: ao.x - gw / 2, y: gy, w: gw, h: CONFIG.glyphH, kind: "ao", f: ao.f });
+    } else {
+      // p_z, p_x, p_y côte à côte, à échelle réduite pour ne pas se chevaucher
+      const fy = { ...ao.fx, type: "py" };
+      const sp = CONFIG.pGlyphSpacing;
+      [ao.f, ao.fx, fy].forEach((f, k) => {
+        const gx = ao.x + (k - 1) * sp;
+        drawAOGlyph(ctx, f, gx, gy, sp, CONFIG.glyphH, scale * CONFIG.pGlyphScale);
+        hitRects.push({ x: gx - sp / 2, y: gy, w: sp, h: CONFIG.glyphH, kind: "ao", f });
+      });
+    }
+    const e = ELEMENTS[state.atoms[ao.atom].el];
+    const nLabel = (ao.type === "s" ? e.n : 2) + ao.type;
+    ctx.fillStyle = "#1a1a2e";
+    ctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+    ctx.textAlign = ao.atom === 0 ? "right" : "left";
+    ctx.fillText(nLabel, ao.atom === 0 ? x0 - 5 : x1 + 5, ao.yDisp + 5);
+    if (ao.type === "p") {
+      ctx.font = "italic 10px 'Palatino Linotype', Georgia, serif";
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.textAlign = "center";
+      ["z", "x", "y"].forEach((c, k) => ctx.fillText(c, ao.x + (k - 1) * CONFIG.pGlyphSpacing, gy + CONFIG.glyphH + 9));
+    }
+  }
+
+  // Cases, vignettes et noms des OM
+  for (const it of moItems) {
+    const half = it.mo.deg * CONFIG.boxW / 2;
+    const [, x1] = drawBoxes(cx, it.yDisp, it.occ);
+    drawMOName(it.mo, x1 + 8, it.yDisp);
+    const gy = it.yDisp + CONFIG.boxH / 2 + CONFIG.glyphGap;
+    drawMOGlyph(ctx, it.mo, cx, gy, CONFIG.glyphW, CONFIG.glyphH, scale);
+    hitRects.push({ x: cx - CONFIG.glyphW / 2, y: gy, w: CONFIG.glyphW, h: CONFIG.glyphH,
+                    kind: "mo", mo: it.mo, occ: it.occ });
+  }
+  return { mos, moOcc };
+}
+
+/* =============================================================
+   MISE À JOUR COMPLÈTE
+   ============================================================= */
+function update() {
+  const data = computeMOs();
+  const { mos, moOcc } = draw(data);
+
+  resSss.textContent = data.ref.sss.toFixed(3);
+  resSzz.textContent = data.ref.szz === null ? "—" : data.ref.szz.toFixed(3);
+  resSxx.textContent = data.ref.sxx === null ? "—" : data.ref.sxx.toFixed(3);
+
+  let bo = 0;
+  mos.forEach((mo, k) => {
+    const n = moOcc[k].reduce((s, v) => s + v, 0);
+    if (mo.kind === "liant") bo += n;
+    if (mo.kind === "antiliant") bo -= n;
+  });
+  bo /= 2;
+  resBO.textContent = Number.isInteger(bo) ? bo.toString() : bo.toFixed(1);
+}
+
+/* =============================================================
+   PANNEAU : ATOMES, ÉLECTRONS, DISTANCE
+   ============================================================= */
+function syncAtomUI(i) {
+  const a = state.atoms[i];
+  const e = ELEMENTS[a.el];
+  const u = ui[i];
+  u.sel.value = a.el;
+  u.chkP.disabled = !e.p;
+  if (!e.p) a.p = false;
+  u.chkP.checked = a.p;
+  const maxE = a.p ? 8 : 2;
+  a.ne = Math.min(a.ne, maxE);
+  u.num.max = maxE;
+  u.num.value = a.ne;
+  u.minus.disabled = a.ne <= 0;
+  u.plus.disabled = a.ne >= maxE;
+}
+
+ui.forEach((u, i) => {
+  for (const el of Object.keys(ELEMENTS)) {
+    const opt = document.createElement("option");
+    opt.value = el; opt.textContent = el;
+    u.sel.appendChild(opt);
+  }
+  u.sel.addEventListener("change", () => {
+    const e = ELEMENTS[u.sel.value];
+    state.atoms[i] = { el: u.sel.value, p: !!e.p, ne: e.ve };
+    syncAtomUI(i);
+    update();
+  });
+  u.chkP.addEventListener("change", () => {
+    state.atoms[i].p = u.chkP.checked;
+    syncAtomUI(i);
+    update();
+  });
+  // Nombre d'électrons : boutons − / + et saisie directe (bornée à [0, max])
+  const setElectrons = n => {
+    const maxE = state.atoms[i].p ? 8 : 2;
+    state.atoms[i].ne = Math.max(0, Math.min(maxE, Number.isFinite(n) ? n : state.atoms[i].ne));
+    syncAtomUI(i);
+    update();
+  };
+  u.minus.addEventListener("click", () => setElectrons(state.atoms[i].ne - 1));
+  u.plus.addEventListener("click", () => setElectrons(state.atoms[i].ne + 1));
+  u.num.addEventListener("change", () => setElectrons(parseInt(u.num.value, 10)));
+});
+
+function setR(R) {
+  state.R = Math.max(CONFIG.Rmin, Math.min(CONFIG.Rmax, R));
+  sliderR.value = state.R;
+  valR.textContent = state.R.toFixed(2);
+}
+
+sliderR.addEventListener("input", () => {
+  setR(parseFloat(sliderR.value));
+  update();
+});
+
+chkOM.addEventListener("change", () => {
+  state.showMO = chkOM.checked;
+  update();
+});
+
+/* =============================================================
+   AGRANDISSEMENT D'UNE ORBITALE
+   ============================================================= */
+function atomName(i) {
+  return (i === 0 ? "A" : "B") + " (" + state.atoms[i].el + ")";
+}
+
+/** Nom HTML d'une OA de base : 1s, 2s, 2p_z, 2p_x (avec l'atome en indice si demandé) */
+function aoHTML(f, withAtom = false) {
+  const sub = [];
+  if (f.type !== "s") sub.push(f.type === "pz" ? "z" : f.type === "px" ? "x" : "y");
+  if (withAtom) sub.push(f.atom === 0 ? "A" : "B");
+  const base = f.type === "s" ? f.n + "s" : "2p";
+  return base + (sub.length ? "<sub>" + sub.join(",") + "</sub>" : "");
+}
+
+/** Nom HTML d'une OM : σ, σ*, π, π* avec indice et mention non liante */
+function moHTML(mo) {
+  let t = (mo.index ? mo.index : "") + mo.sym + (mo.kind === "antiliant" ? "*" : "");
+  if (mo.sub) t += "<sub>" + mo.sub + "</sub>";
+  return t;
+}
+
+function fmtE(E) {
+  return (E >= 0 ? "+" : "−") + Math.abs(E).toFixed(2) + " eV";
+}
+
+/** Fond, axe z et barre d'échelle de la fenêtre d'agrandissement */
+function drawZoomFrame(pxPerBohr) {
+  const W = CONFIG.zoomW, H = CONFIG.zoomH;
+  zctx.clearRect(0, 0, W, H);
+  zctx.fillStyle = "#fffef9";
+  zctx.fillRect(0, 0, W, H);
+  zctx.strokeStyle = "rgba(0,0,0,0.3)";
+  zctx.lineWidth = 1;
+  zctx.setLineDash([5, 4]);
+  zctx.beginPath(); zctx.moveTo(0, H / 2); zctx.lineTo(W, H / 2); zctx.stroke();
+  zctx.setLineDash([]);
+  zctx.fillStyle = "rgba(0,0,0,0.4)";
+  zctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  zctx.textAlign = "left";
+  zctx.fillText("z", W - 16, H / 2 - 8);
+  // Barre d'échelle : 1 Å
+  const L = pxPerBohr / BOHR;
+  zctx.strokeStyle = "#1a1a2e";
+  zctx.lineWidth = 2;
+  zctx.beginPath(); zctx.moveTo(16, H - 16); zctx.lineTo(16 + L, H - 16); zctx.stroke();
+  zctx.fillStyle = "#1a1a2e";
+  zctx.font = "12px 'Palatino Linotype', Georgia, serif";
+  zctx.fillText("1 Å", 16 + L + 6, H - 12);
+}
+
+function labelNucleus(x, text, color) {
+  zctx.fillStyle = color;
+  zctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
+  zctx.textAlign = "center";
+  zctx.fillText(text, x, CONFIG.zoomH / 2 + 22);
+}
+
+function openZoom(hit) {
+  const W = CONFIG.zoomW, H = CONFIG.zoomH;
+  const fill = 0.9;
+
+  if (hit.kind === "ao") {
+    const f = hit.f;
+    const ext = orbitalExtent(f);
+    const sc = fill * Math.min(H / (2 * ext), W / (2 * ext));
+    drawZoomFrame(sc);
+    drawAOGlyph(zctx, f, W / 2, 0, W, H, sc, 4);
+    labelNucleus(W / 2 + 18, atomName(f.atom), f.atom === 1 ? "#2a5d8f" : "#222");
+    zoomTitle.innerHTML = "Orbitale atomique " + aoHTML(f) + " de l'atome " + atomName(f.atom);
+    zoomInfo.innerHTML =
+      `<p>Énergie α = <strong>${fmtE(f.alpha)}</strong>, exposant de Slater ζ = ${f.zeta.toFixed(3)} bohr<sup>−1</sup>.</p>`
+      + `<p>Contour tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |χ|.</p>`;
+  } else {
+    const mo = hit.mo;
+    const Rb = state.R / BOHR;
+    let ext = 0;
+    for (const f of mo.funcs) ext = Math.max(ext, orbitalExtent(f));
+    let sc;
+    if (state.showMO) sc = fill * Math.min(H / (2 * ext), W / (Rb + 2 * ext));
+    else sc = fill * Math.min(H / (2 * ext), W / 2 / (2 * ext));
+    drawZoomFrame(sc);
+    drawMOGlyph(zctx, mo, W / 2, 0, W, H, sc, 4);
+    if (state.showMO) {
+      labelNucleus(W / 2 - Rb / 2 * sc, atomName(0), "#222");
+      labelNucleus(W / 2 + Rb / 2 * sc, atomName(1), "#2a5d8f");
+    } else {
+      labelNucleus(W / 4, atomName(0), "#222");
+      labelNucleus(3 * W / 4, atomName(1), "#2a5d8f");
+    }
+    // Développement LCAO (coefficients significatifs)
+    const terms = mo.funcs
+      .map((f, i) => ({ f, c: mo.c[i] }))
+      .filter(t => Math.abs(t.c) > 0.005)
+      .map((t, k) => {
+        const sign = t.c < 0 ? " − " : (k === 0 ? "" : " + ");
+        return `${sign}${Math.abs(t.c).toFixed(3)} ${aoHTML(t.f, true)}`;
+      }).join("");
+    const nEl = hit.occ.reduce((a, b) => a + b, 0);
+    const character = { liant: "liante", antiliant: "antiliante", nl: "non liante" }[mo.kind];
+    zoomTitle.innerHTML = "Orbitale moléculaire " + moHTML(mo)
+      + (mo.deg === 2 ? " (deux OM dégénérées ; celle du plan xz est représentée)" : "");
+    zoomInfo.innerHTML =
+      `<div class="formula">ψ = ${terms}</div>`
+      + `<p>Énergie : <strong>${fmtE(mo.E)}</strong> — OM ${character} — `
+      + `${nEl} électron${nEl > 1 ? "s" : ""}${mo.deg === 2 ? " (pour les deux OM)" : ""}.</p>`
+      + `<p>${state.showMO ? "Contour de l'OM" : "Les deux OA pondérées par leurs coefficients"}, `
+      + `tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |ψ|, R = ${state.R.toFixed(2)} Å.</p>`;
+  }
+  zoomEl.hidden = false;
+}
+
+function closeZoom() {
+  zoomEl.hidden = true;
+}
+
+zoomClose.addEventListener("click", closeZoom);
+zoomEl.addEventListener("click", e => { if (e.target === zoomEl) closeZoom(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeZoom(); });
+
+function hitAt(px, py) {
+  return hitRects.find(r => r.f?.type !== "py"
+    && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h);
+}
+
+/* =============================================================
+   INTERACTIONS : GLISSER UN AXE
+   ============================================================= */
+function getPointerPos(e) {
+  const rect = cvs.getBoundingClientRect();
+  const scaleX = CONFIG.canvasW / rect.width;
+  const scaleY = CONFIG.canvasH / rect.height;
+  const p = e.touches ? e.touches[0] : e;
+  return [(p.clientX - rect.left) * scaleX, (p.clientY - rect.top) * scaleY];
+}
+
+function isNearAxis(px, py) {
+  if (py < CONFIG.plotTop - 30 || py > CONFIG.plotBottom + 55) return false;
+  return axesX().some(x => Math.abs(px - x) < 12 || (py > CONFIG.plotBottom + 15 && Math.abs(px - x) < 40));
+}
+
+function startDrag(e) {
+  const [px, py] = getPointerPos(e);
+  if (!isNearAxis(px, py)) {
+    const hit = hitAt(px, py);
+    if (hit) { e.preventDefault(); openZoom(hit); }
+    return;
+  }
+  e.preventDefault();
+  state.dragging = true;
+  update();
+}
+
+function moveDrag(e) {
+  const [px, py] = getPointerPos(e);
+  if (!state.dragging) {
+    cvs.style.cursor = isNearAxis(px, py) ? "ew-resize" : hitAt(px, py) ? "zoom-in" : "default";
+    return;
+  }
+  e.preventDefault();
+  setR(RFromSep(2 * Math.abs(px - CONFIG.canvasW / 2)));
+  update();
+}
+
+function endDrag() {
+  if (!state.dragging) return;
+  state.dragging = false;
+  update();
+}
+
+cvs.addEventListener("mousedown", startDrag);
+cvs.addEventListener("mousemove", moveDrag);
+cvs.addEventListener("mouseup", endDrag);
+cvs.addEventListener("mouseleave", endDrag);
+cvs.addEventListener("touchstart", startDrag, { passive: false });
+cvs.addEventListener("touchmove", moveDrag, { passive: false });
+cvs.addEventListener("touchend", endDrag);
+
+/* =============================================================
+   RESET
+   ============================================================= */
+function resetAll() {
+  state.atoms = [{ el: "H", p: false, ne: 1 }, { el: "H", p: false, ne: 1 }];
+  state.showMO = true;
+  chkOM.checked = true;
+  syncAtomUI(0);
+  syncAtomUI(1);
+  setR(CONFIG.defaultR);
+  update();
+}
+
+btnReset.addEventListener("click", resetAll);
+
+/* =============================================================
+   INITIALISATION
+   ============================================================= */
+resetAll();
+
+</script>
+</body>
+</html>
