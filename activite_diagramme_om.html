@@ -601,6 +601,9 @@ const CONFIG = {
   boxH: 24,
   glyphW: 150,
   glyphH: 70,
+  piGlyphW: 92,            // largeur de chacune des deux vignettes d'un niveau π
+  oblique: 0.35,           // vue décalée : déplacement à l'écran par bohr vers l'observateur
+  obliqueSteps: 20,        // nombre de points suivis le long de chaque rayon de cette vue
   glyphGap: 4,
   elementGap: 10,          // espace vertical minimal entre deux niveaux
   isoFraction: 0.2,        // contour à 20 % du maximum de |ψ|
@@ -829,6 +832,7 @@ const Y_P = Math.sqrt(3 / (4 * Math.PI));
 /**
  * Valeur d'une orbitale de base en un point (dx = composante x, dz = composante z
  * par rapport au noyau). type : "s", "pz" (axe internucléaire) ou "px".
+ * "py" a la même forme que "px" ; seule sa vue change (voir frontValue).
  */
 function chi(f, dx, dz) {
   const r = Math.sqrt(dx * dx + dz * dz);
@@ -1200,19 +1204,41 @@ function glyphScale(bA, bB) {
 }
 
 /**
+ * Vue décalée d'une π d'axe y : ce qui vient vers l'observateur (y > 0) glisse en bas
+ * à gauche. On suit le rayon du pixel (x, z) depuis l'avant et on garde le premier point
+ * au-delà du contour : le lobe avant éclipse ainsi le lobe arrière, mais pas complètement.
+ */
+function frontValue(terms, x, z, thr, yMax) {
+  for (let k = 0; k <= CONFIG.obliqueSteps; k++) {
+    const y = yMax * (1 - 2 * k / CONFIG.obliqueSteps);
+    const rho = Math.hypot(x + CONFIG.oblique * y, y);
+    if (rho < 1e-9) continue;
+    let v = 0;
+    for (const t of terms) v += t.c * chi(t.f, rho, z + CONFIG.oblique * y - t.zc);
+    v *= y / rho;
+    if (Math.abs(v) > thr) return v;
+  }
+  return 0;
+}
+
+/**
  * Dessine une fonction (somme de termes c·χ centrés en zc) dans un rectangle
  * (x0, y0, w, h) ; zc et l'origine en bohr, centre du rectangle = zMid.
+ * pointing : les p_x des termes sont tournées en p_y, dont l'axe pointe vers l'observateur.
  */
-function drawFunction(tctx, terms, x0, y0, w, h, scale, zMid, thr) {
+function drawFunction(tctx, terms, x0, y0, w, h, scale, zMid, thr, pointing = false) {
   glyphCvs.width = w; glyphCvs.height = h;
   const img = glyphCtx.createImageData(w, h);
   const vals = new Float32Array(w * h);
+  let yMax = 0;
+  if (pointing) for (const t of terms) yMax = Math.max(yMax, orbitalExtent(t.f));
   for (let j = 0; j < h; j++) {
     const x = (h / 2 - j - 0.5) / scale;
     for (let i = 0; i < w; i++) {
       const z = zMid + (i + 0.5 - w / 2) / scale;
       let v = 0;
-      for (const t of terms) v += t.c * chi(t.f, x, z - t.zc);
+      if (pointing) v = frontValue(terms, x, z, thr, yMax);
+      else for (const t of terms) v += t.c * chi(t.f, x, z - t.zc);
       vals[j * w + i] = v;
     }
   }
@@ -1256,18 +1282,10 @@ function drawNucleus(tctx, x, y, color, r = 2) {
 
 /** Dessin d'une OA seule, centré en (cx, y0 + h/2) */
 function drawAOGlyph(tctx, f, cx, y0, w, h, scale, rNuc = 2) {
-  if (f.type === "py") {
-    // p_y : axe perpendiculaire au plan du dessin
-    tctx.strokeStyle = "rgba(0,0,0,0.45)";
-    tctx.lineWidth = 1.2;
-    tctx.beginPath(); tctx.arc(cx, y0 + h / 2, 7, 0, 2 * Math.PI); tctx.stroke();
-    tctx.beginPath(); tctx.arc(cx, y0 + h / 2, 1.8, 0, 2 * Math.PI);
-    tctx.fillStyle = "rgba(0,0,0,0.6)"; tctx.fill();
-    return;
-  }
   const terms = [{ c: 1, f, zc: 0 }];
   const thr = CONFIG.isoFraction * maxAbs(terms, w, h, scale, 0);
-  drawFunction(tctx, terms, cx - w / 2, y0, w, h, scale, 0, thr);
+  // p_y : axe perpendiculaire au plan du dessin, en vue décalée
+  drawFunction(tctx, terms, cx - w / 2, y0, w, h, scale, 0, thr, f.type === "py");
   drawNucleus(tctx, cx, y0 + h / 2, f.atom === 1 ? "#2a5d8f" : "#222", rNuc);
 }
 
@@ -1279,30 +1297,38 @@ function moPart(mo, atom) {
     .filter(t => t.f.atom === atom);
 }
 
+/** Rayon utile d'une OM (bohr) ; un niveau π garde de la place pour le décalage de la vue */
+function moExtent(mo) {
+  let ext = 0;
+  for (const f of mo.funcs) ext = Math.max(ext, orbitalExtent(f));
+  return mo.deg === 2 ? ext * (1 + CONFIG.oblique) : ext;
+}
+
 /**
  * Dessin d'une OM dans le rectangle centré en cx, de hauteur h à partir de y0 :
- * contour de l'OM, ou les deux OA pondérées côte à côte (selon la case à cocher)
+ * contour de l'OM, ou les deux OA pondérées côte à côte (selon la case à cocher).
+ * pointing : OM π d'axe y, qui pointe vers l'observateur (vue décalée).
  */
-function drawMOGlyph(tctx, mo, cx, y0, w, h, scale, rNuc = 2) {
+function drawMOGlyph(tctx, mo, cx, y0, w, h, scale, rNuc = 2, pointing = false) {
   const Rb = state.R / BOHR;
+  const ext = moExtent(mo);
   if (state.showMO) {
     // Échelle réduite si la molécule ne tient pas dans le rectangle
-    let ext = 0;
-    for (const f of mo.funcs) ext = Math.max(ext, orbitalExtent(f));
-    const sc = Math.min(scale, w / (Rb + 2 * ext));
+    const sc = Math.min(scale, h / (2 * ext), w / (Rb + 2 * ext));
     const terms = [...moPart(mo, 0), ...moPart(mo, 1)];
     const thr = CONFIG.isoFraction * maxAbs(terms, w, h, sc, Rb / 2);
-    drawFunction(tctx, terms, cx - w / 2, y0, w, h, sc, Rb / 2, thr);
+    drawFunction(tctx, terms, cx - w / 2, y0, w, h, sc, Rb / 2, thr, pointing);
     drawNucleus(tctx, cx - Rb / 2 * sc, y0 + h / 2, "#222", rNuc);
     drawNucleus(tctx, cx + Rb / 2 * sc, y0 + h / 2, "#2a5d8f", rNuc);
   } else {
     // Chaque OA (pondérée par son coefficient) dans sa moitié de rectangle
     const half = Math.floor(w / 2);
+    const sc = Math.min(scale, h / (2 * ext), half / (2 * ext));
     const parts = [0, 1].map(a => moPart(mo, a).map(t => ({ ...t, zc: 0 })));
-    const thr = CONFIG.isoFraction * Math.max(...parts.map(p => maxAbs(p, half, h, scale, 0)));
+    const thr = CONFIG.isoFraction * Math.max(...parts.map(p => maxAbs(p, half, h, sc, 0)));
     parts.forEach((p, a) => {
       const x0 = cx - half + a * half;
-      if (p.length && thr > 0) drawFunction(tctx, p, x0, y0, half, h, scale, 0, thr);
+      if (p.length && thr > 0) drawFunction(tctx, p, x0, y0, half, h, sc, 0, thr, pointing);
       drawNucleus(tctx, x0 + half / 2, y0 + h / 2, a === 0 ? "#222" : "#2a5d8f", rNuc);
     });
   }
@@ -1546,9 +1572,24 @@ function draw(data) {
     const [, x1] = drawBoxes(cx, it.yDisp, it.occ);
     drawMOName(it.mo, x1 + 8, it.yDisp);
     const gy = it.yDisp + CONFIG.boxH / 2 + CONFIG.glyphGap;
-    drawMOGlyph(ctx, it.mo, cx, gy, CONFIG.glyphW, CONFIG.glyphH, scale);
-    hitRects.push({ x: cx - CONFIG.glyphW / 2, y: gy, w: CONFIG.glyphW, h: CONFIG.glyphH,
-                    kind: "mo", mo: it.mo, occ: it.occ });
+    if (it.mo.deg === 2) {
+      // Deux OM dégénérées : autant de vignettes que de cases, celle d'axe y en vue décalée
+      const w = CONFIG.piGlyphW;
+      [false, true].forEach((pointing, k) => {
+        const gx = cx + (k - 0.5) * w;
+        drawMOGlyph(ctx, it.mo, gx, gy, w, CONFIG.glyphH, scale, 2, pointing);
+        hitRects.push({ x: gx - w / 2, y: gy, w, h: CONFIG.glyphH,
+                        kind: "mo", mo: it.mo, occ: it.occ, pointing });
+        ctx.font = "italic 10px 'Palatino Linotype', Georgia, serif";
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.textAlign = "center";
+        ctx.fillText(pointing ? "y" : "x", gx, gy + CONFIG.glyphH + 9);
+      });
+    } else {
+      drawMOGlyph(ctx, it.mo, cx, gy, CONFIG.glyphW, CONFIG.glyphH, scale);
+      hitRects.push({ x: cx - CONFIG.glyphW / 2, y: gy, w: CONFIG.glyphW, h: CONFIG.glyphH,
+                      kind: "mo", mo: it.mo, occ: it.occ });
+    }
   }
 
   const pol = polarity(mos, moOcc);
@@ -1891,17 +1932,17 @@ function openZoom(hit) {
     zoomTitle.innerHTML = "Orbitale atomique " + aoHTML(f) + " de l'atome " + atomName(f.atom);
     zoomInfo.innerHTML =
       `<p>Énergie α = <strong>${fmtE(f.alpha)}</strong>, exposant de Slater ζ = ${f.zeta.toFixed(3)} bohr<sup>−1</sup>.</p>`
-      + `<p>Contour tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |χ|.</p>`;
+      + `<p>Contour tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |χ|.</p>`
+      + (f.type === "py" ? "<p>Vue légèrement décalée : le lobe qui vient vers nous cache en partie celui de derrière.</p>" : "");
   } else {
     const mo = hit.mo;
     const Rb = state.R / BOHR;
-    let ext = 0;
-    for (const f of mo.funcs) ext = Math.max(ext, orbitalExtent(f));
+    const ext = moExtent(mo);
     let sc;
     if (state.showMO) sc = fill * Math.min(H / (2 * ext), W / (Rb + 2 * ext));
     else sc = fill * Math.min(H / (2 * ext), W / 2 / (2 * ext));
     drawZoomFrame(sc);
-    drawMOGlyph(zctx, mo, W / 2, 0, W, H, sc, 4);
+    drawMOGlyph(zctx, mo, W / 2, 0, W, H, sc, 4, hit.pointing);
     if (state.showMO) {
       labelNucleus(W / 2 - Rb / 2 * sc, atomName(0), "#222");
       labelNucleus(W / 2 + Rb / 2 * sc, atomName(1), "#2a5d8f");
@@ -1915,18 +1956,20 @@ function openZoom(hit) {
       .filter(t => Math.abs(t.c) > 0.005)
       .map((t, k) => {
         const sign = t.c < 0 ? " − " : (k === 0 ? "" : " + ");
-        return `${sign}${Math.abs(t.c).toFixed(3)} ${aoHTML(t.f, true)}`;
+        return `${sign}${Math.abs(t.c).toFixed(3)} ${aoHTML(hit.pointing ? { ...t.f, type: "py" } : t.f, true)}`;
       }).join("");
     const nEl = hit.occ.reduce((a, b) => a + b, 0);
     const character = { liant: "liante", antiliant: "antiliante", nl: "non liante" }[mo.kind];
     zoomTitle.innerHTML = "Orbitale moléculaire " + moHTML(mo)
-      + (mo.deg === 2 ? " (deux OM dégénérées ; celle du plan xz est représentée)" : "");
+      + (mo.deg === 2 ? " (deux OM dégénérées ; ici celle "
+        + (hit.pointing ? "d'axe y, qui pointe vers nous" : "du plan xz") + ")" : "");
     zoomInfo.innerHTML =
       `<div class="formula">ψ = ${terms}</div>`
       + `<p>Énergie : <strong>${fmtE(mo.E)}</strong> — OM ${character} — `
       + `${nEl} électron${nEl > 1 ? "s" : ""}${mo.deg === 2 ? " (pour les deux OM)" : ""}.</p>`
       + `<p>${state.showMO ? "Contour de l'OM" : "Les deux OA pondérées par leurs coefficients"}, `
-      + `tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |ψ|, R = ${state.R.toFixed(2)} Å.</p>`;
+      + `tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |ψ|, R = ${state.R.toFixed(2)} Å.</p>`
+      + (hit.pointing ? "<p>Vue légèrement décalée : le lobe qui vient vers nous cache en partie celui de derrière.</p>" : "");
   }
   zoomEl.hidden = false;
 }
@@ -1945,7 +1988,7 @@ function inRect(r, px, py) {
 
 /** Vignette cliquable (agrandissement) */
 function hitAt(px, py) {
-  return hitRects.find(r => (r.kind === "ao" || r.kind === "mo") && r.f?.type !== "py" && inRect(r, px, py));
+  return hitRects.find(r => (r.kind === "ao" || r.kind === "mo") && inRect(r, px, py));
 }
 
 /** Cases d'OA déplaçables verticalement (mode libre uniquement) */
