@@ -365,6 +365,10 @@ canvas { max-width: 100%; height: auto; cursor: default; }
 .panel { flex: 0 0 auto; }
 canvas { max-width: 100%; height: auto; }
 
+/* Vue 3D : case à cocher, et à côté celle de la synchronisation */
+.view3d-row { display: flex; gap: 1.2em; }
+.checkbox-row[hidden] { display: none; }
+
 /* Zone cliquable survolée : cadre léger et loupe, sans intercepter la souris */
 .zoom-hint {
   position: absolute;
@@ -552,6 +556,17 @@ canvas { max-width: 100%; height: auto; }
       <span>Dessiner l'OM (sinon : les deux OA en interaction)</span>
     </label>
 
+    <div class="view3d-row">
+      <label class="checkbox-row">
+        <input type="checkbox" id="chk3D">
+        <span>3D</span>
+      </label>
+      <label class="checkbox-row" id="rowSync" hidden>
+        <input type="checkbox" id="chkSync" checked>
+        <span>Rotation synchronisée</span>
+      </label>
+    </div>
+
     <div class="results">
       <h2>Résultats</h2>
       <div class="result-row">
@@ -574,7 +589,7 @@ canvas { max-width: 100%; height: auto; }
 
     <div class="dipole-note" id="dipoleNote" hidden></div>
 
-    <div class="hint">Faire glisser un des axes d'énergie latéralement pour rapprocher ou éloigner les atomes. Cliquer sur une orbitale pour l'agrandir. En mode libre, faire glisser verticalement les cases d'une OA pour changer son énergie.</div>
+    <div class="hint">Faire glisser un des axes d'énergie latéralement pour rapprocher ou éloigner les atomes. Cliquer sur une orbitale pour l'agrandir. En 3D, faire glisser une orbitale pour la faire tourner. En mode libre, faire glisser verticalement les cases d'une OA pour changer son énergie.</div>
 
     <button class="reset" id="btnReset">Réinitialiser</button>
 
@@ -629,6 +644,10 @@ const CONFIG = {
   piGlyphW: 92,            // largeur de chacune des deux vignettes d'un niveau π
   oblique: 0.35,           // vue décalée : déplacement à l'écran par bohr vers l'observateur
   obliqueSteps: 20,        // nombre de points suivis le long de chaque rayon de cette vue
+  tilt3D: 0.35,            // vue 3D : inclinaison initiale (rad), proche de la vue décalée
+  rotSpeed3D: 0.01,        // vue 3D : rotation (rad) par pixel de déplacement de la souris
+  pairGap3D: 2.0,          // paire d'OA en 3D : écart des noyaux, en rayons utiles (écartés pour rester lisibles)
+  pairReach3D: 1.8,        // paire d'OA en 3D : rayon de l'ensemble, dans ces mêmes rayons
   glyphGap: 4,
   elementGap: 10,          // espace vertical minimal entre deux niveaux
   isoFraction: 0.2,        // contour à 20 % du maximum de |ψ|
@@ -798,6 +817,9 @@ let state = {
   ],
   R: 0.74,              // Å — fixée par resetAll() à la distance initiale de la molécule
   showMO: true,
+  show3D: false,        // orbitales dessinées en objets 3D
+  sync3D: true,         // en 3D : toutes les orbitales tournent ensemble
+  rotating: null,       // orbitale saisie pour la faire tourner { hit, key, x, y, moved }
   dragging: false,
 };
 
@@ -826,6 +848,9 @@ const ui = [0, 1].map(i => {
 const sliderR = document.getElementById("sliderR");
 const valR = document.getElementById("valR");
 const chkOM = document.getElementById("chkOM");
+const chk3D = document.getElementById("chk3D");
+const chkSync = document.getElementById("chkSync");
+const rowSync = document.getElementById("rowSync");
 const resSss = document.getElementById("resSss");
 const resSzz = document.getElementById("resSzz");
 const resSxx = document.getElementById("resSxx");
@@ -1229,6 +1254,184 @@ function glyphScale(bA, bB) {
   return CONFIG.glyphH / (2 * ext);
 }
 
+/* =============================================================
+   VUE 3D : ORIENTATIONS ET DESSIN (WEBGL, SANS BIBLIOTHÈQUE)
+   Une orientation R est une matrice 3×3 : (écran droite, écran haut,
+   vers l'observateur) = R · (z, x, y).
+   ============================================================= */
+/** Orientation R suivie d'une rotation de a (axe vertical de l'écran) et b (axe horizontal) */
+function rotated(R, a, b) {
+  const [ca, sa, cb, sb] = [Math.cos(a), Math.sin(a), Math.cos(b), Math.sin(b)];
+  const Ra = [[ca, 0, sa], [0, 1, 0], [-sa, 0, ca]];
+  const Rb = [[1, 0, 0], [0, cb, -sb], [0, sb, cb]];
+  return matMul(Rb, matMul(Ra, R));
+}
+
+function defaultRot3D() {
+  return rotated([[1, 0, 0], [0, 1, 0], [0, 0, 1]], -CONFIG.tilt3D, CONFIG.tilt3D);
+}
+
+// Orientation commune, et celles des orbitales tournées individuellement
+const view3D = { shared: defaultRot3D(), own: new Map() };
+
+/** Toutes les orbitales reprennent l'orientation initiale */
+function resetView3D() {
+  view3D.shared = defaultRot3D();
+  view3D.own.clear();
+}
+
+function aoKey(f) { return `ao:${f.atom}:${f.n}:${f.type}`; }
+function moKey(mo, pointing) {
+  return `mo:${mo.index || ""}${mo.sym}${mo.sub || ""}:${mo.kind}:${pointing ? "y" : "x"}`;
+}
+function hitKey(hit) { return hit.kind === "ao" ? aoKey(hit.f) : moKey(hit.mo, hit.pointing); }
+function rotOf(key) { return view3D.own.get(key) || view3D.shared; }
+/** Une des deux OA pondérées d'une OM (case « Dessiner l'OM » décochée) */
+function moPartKey(mo, pointing, atom) { return `${moKey(mo, pointing)}:${atom}`; }
+
+/** Orbitale saisie dans une vignette ; fx : position de la souris (0 à 1) dans sa largeur */
+function grabbedKey(hit, fx) {
+  if (hit.kind === "mo" && !state.showMO) return moPartKey(hit.mo, hit.pointing, fx < 0.5 ? 0 : 1);
+  return hitKey(hit);
+}
+
+/** Fait tourner une orbitale (dx, dy : déplacement en pixels), ou toutes si synchronisées */
+function rotateOrbital(key, dx, dy) {
+  const k = CONFIG.rotSpeed3D;
+  const R = rotated(rotOf(key), dx * k, dy * k);
+  if (state.sync3D) { view3D.shared = R; view3D.own.clear(); }
+  else view3D.own.set(key, R);
+}
+
+/** Échelle pour qu'un objet de rayon bound (bohr) tienne dans le rectangle sous tout angle */
+function fit3D(scale, w, h, bound) {
+  return Math.min(scale, Math.min(w, h) / (2 * bound));
+}
+
+const FRAG_3D = `
+precision highp float;
+uniform vec2 uCenter;
+uniform float uScale, uZMid, uThr, uBound;
+uniform float uSplit;       // nombre de termes du premier objet ; les suivants forment le second
+uniform mat3 uRot;          // écran -> (z, x, y)
+uniform vec4 uA[4];         // c·N, ζ, n−1, zc
+uniform vec4 uB[4];         // partie s, puis axe de la partie p (z, x, y)
+uniform vec3 uPos, uNeg;
+
+float psi(vec3 q) {
+  // Deux objets distincts ne s'additionnent pas : en chaque point, le plus intense l'emporte
+  float v0 = 0.0, v1 = 0.0;
+  for (int i = 0; i < 4; i++) {
+    vec3 d = q - vec3(uA[i].w, 0.0, 0.0);
+    float r = max(length(d), 1e-4);
+    float v = uA[i].x * pow(r, uA[i].z) * exp(-uA[i].y * r) * (uB[i].x + dot(uB[i].yzw, d) / r);
+    if (float(i) < uSplit) v0 += v; else v1 += v;
+  }
+  return abs(v0) > abs(v1) ? v0 : v1;
+}
+
+vec3 toOrbital(vec3 p) { return uRot * p + vec3(uZMid, 0.0, 0.0); }
+
+void main() {
+  vec2 p = (gl_FragCoord.xy - uCenter) / uScale;
+  float room = uBound * uBound - dot(p, p);
+  if (room <= 0.0) discard;
+  // On suit le rayon du pixel depuis l'avant jusqu'à la surface |ψ| = seuil
+  float W = sqrt(room);
+  float dt = 2.0 * W / 48.0;
+  float w = W;
+  bool found = false;
+  for (int k = 0; k <= 48; k++) {
+    if (abs(psi(toOrbital(vec3(p, w)))) > uThr) { found = true; break; }
+    w -= dt;
+  }
+  if (!found) discard;
+  float a = w, b = w + dt;
+  for (int k = 0; k < 5; k++) {
+    float m = 0.5 * (a + b);
+    if (abs(psi(toOrbital(vec3(p, m)))) > uThr) a = m; else b = m;
+  }
+  vec3 q = vec3(p, 0.5 * (a + b));
+  float s = sign(psi(toOrbital(q)));
+  // Normale de la surface (gradient de ψ, à l'écran), éclairage et bord plus soutenu
+  const float e = 0.03;
+  vec3 n = normalize(-s * vec3(
+    psi(toOrbital(q + vec3(e, 0.0, 0.0))) - psi(toOrbital(q - vec3(e, 0.0, 0.0))),
+    psi(toOrbital(q + vec3(0.0, e, 0.0))) - psi(toOrbital(q - vec3(0.0, e, 0.0))),
+    psi(toOrbital(q + vec3(0.0, 0.0, e))) - psi(toOrbital(q - vec3(0.0, 0.0, e)))));
+  float diff = max(dot(n, normalize(vec3(-0.4, 0.5, 0.77))), 0.0);
+  float rim = pow(1.0 - max(n.z, 0.0), 3.0);
+  vec3 col = s > 0.0 ? uPos : uNeg;
+  vec3 rgb = mix(vec3(1.0), col, 0.5) * (0.68 + 0.32 * diff);
+  gl_FragColor = vec4(mix(rgb, col, 0.75 * rim), 1.0);
+}`;
+
+/** Contexte WebGL de dessin, ou null si le navigateur ne le permet pas */
+const gl3D = (() => {
+  const canvas = document.createElement("canvas");
+  canvas.width = CONFIG.zoomW; canvas.height = CONFIG.zoomH;
+  const gl = canvas.getContext("webgl", { antialias: false, depth: false, stencil: false });
+  if (!gl) return null;
+  const shader = (type, src) => {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, shader(gl.VERTEX_SHADER,
+    "attribute vec2 aXY; void main() { gl_Position = vec4(aXY, 0.0, 1.0); }"));
+  gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FRAG_3D));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(gl.getAttribLocation(prog, "aXY"));
+  gl.vertexAttribPointer(gl.getAttribLocation(prog, "aXY"), 2, gl.FLOAT, false, 0, 0);
+  const u = {};
+  for (const n of ["uCenter", "uScale", "uZMid", "uThr", "uBound", "uSplit", "uRot", "uA", "uB", "uPos", "uNeg"]) {
+    u[n] = gl.getUniformLocation(prog, n);
+  }
+  gl.uniform3fv(u.uPos, COL_POS.map(c => c / 255));
+  gl.uniform3fv(u.uNeg, COL_NEG.map(c => c / 255));
+  gl.clearColor(0, 0, 0, 0);
+  return { gl, canvas, u };
+})();
+
+/**
+ * Équivalent 3D de drawFunction : surface |ψ| = thr vue sous l'orientation rot.
+ * bound : rayon (bohr) de la sphère contenant l'objet, centrée en z = zMid.
+ * split : nombre de termes du premier objet, si les termes forment deux objets distincts.
+ */
+function drawOrbital3D(tctx, terms, x0, y0, w, h, scale, zMid, thr, pointing, rot, bound, split = 4) {
+  const { gl, canvas, u } = gl3D;
+  // Les vignettes sont calculées au double de leur taille pour adoucir les contours
+  const ss = 2 * w <= canvas.width && 2 * h <= canvas.height ? 2 : 1;
+  const [W, H] = [w * ss, h * ss];
+  const A = new Float32Array(16), B = new Float32Array(16);
+  terms.slice(0, 4).forEach((t, i) => {
+    const type = pointing && t.f.type === "px" ? "py" : t.f.type;
+    A.set([t.c * t.f.N, t.f.zeta, t.f.n - 1, t.zc], 4 * i);
+    B.set(type === "s" ? [Y_S, 0, 0, 0]
+      : [0, type === "pz" ? Y_P : 0, type === "px" ? Y_P : 0, type === "py" ? Y_P : 0], 4 * i);
+  });
+  gl.viewport(0, 0, W, H);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform2f(u.uCenter, W / 2, H / 2);
+  gl.uniform1f(u.uScale, scale * ss);
+  gl.uniform1f(u.uZMid, zMid);
+  gl.uniform1f(u.uThr, thr);
+  gl.uniform1f(u.uBound, bound);
+  gl.uniform1f(u.uSplit, split);
+  // WebGL lit les matrices par colonnes : R aplatie par lignes donne sa transposée (écran -> orbitale)
+  gl.uniformMatrix3fv(u.uRot, false, rot.flat());
+  gl.uniform4fv(u.uA, A);
+  gl.uniform4fv(u.uB, B);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  tctx.drawImage(canvas, 0, canvas.height - H, W, H, Math.round(x0), Math.round(y0), w, h);
+}
+
 /**
  * Vue décalée d'une π d'axe y : ce qui vient vers l'observateur (y > 0) glisse en bas
  * à gauche. On suit le rayon du pixel (x, z) depuis l'avant et on garde le premier point
@@ -1310,8 +1513,13 @@ function drawNucleus(tctx, x, y, color, r = 2) {
 function drawAOGlyph(tctx, f, cx, y0, w, h, scale, rNuc = 2) {
   const terms = [{ c: 1, f, zc: 0 }];
   const thr = CONFIG.isoFraction * maxAbs(terms, w, h, scale, 0);
-  // p_y : axe perpendiculaire au plan du dessin, en vue décalée
-  drawFunction(tctx, terms, cx - w / 2, y0, w, h, scale, 0, thr, f.type === "py");
+  if (state.show3D) {
+    const ext = orbitalExtent(f);
+    drawOrbital3D(tctx, terms, cx - w / 2, y0, w, h, fit3D(scale, w, h, ext), 0, thr, false, rotOf(aoKey(f)), ext);
+  } else {
+    // p_y : axe perpendiculaire au plan du dessin, en vue décalée
+    drawFunction(tctx, terms, cx - w / 2, y0, w, h, scale, 0, thr, f.type === "py");
+  }
   drawNucleus(tctx, cx, y0 + h / 2, f.atom === 1 ? "#2a5d8f" : "#222", rNuc);
 }
 
@@ -1325,9 +1533,14 @@ function moPart(mo, atom) {
 
 /** Rayon utile d'une OM (bohr) ; un niveau π garde de la place pour le décalage de la vue */
 function moExtent(mo) {
+  const ext = moRawExtent(mo);
+  return mo.deg === 2 ? ext * (1 + CONFIG.oblique) : ext;
+}
+
+function moRawExtent(mo) {
   let ext = 0;
   for (const f of mo.funcs) ext = Math.max(ext, orbitalExtent(f));
-  return mo.deg === 2 ? ext * (1 + CONFIG.oblique) : ext;
+  return ext;
 }
 
 /**
@@ -1337,27 +1550,49 @@ function moExtent(mo) {
  */
 function drawMOGlyph(tctx, mo, cx, y0, w, h, scale, rNuc = 2, pointing = false) {
   const Rb = state.R / BOHR;
-  const ext = moExtent(mo);
+  const rot = state.show3D ? rotOf(moKey(mo, pointing)) : null;
+  const ext = rot ? moRawExtent(mo) : moExtent(mo);
   if (state.showMO) {
     // Échelle réduite si la molécule ne tient pas dans le rectangle
-    const sc = Math.min(scale, h / (2 * ext), w / (Rb + 2 * ext));
+    const sc = rot ? fit3D(scale, w, h, Rb / 2 + ext) : Math.min(scale, h / (2 * ext), w / (Rb + 2 * ext));
     const terms = [...moPart(mo, 0), ...moPart(mo, 1)];
     const thr = CONFIG.isoFraction * maxAbs(terms, w, h, sc, Rb / 2);
-    drawFunction(tctx, terms, cx - w / 2, y0, w, h, sc, Rb / 2, thr, pointing);
-    drawNucleus(tctx, cx - Rb / 2 * sc, y0 + h / 2, "#222", rNuc);
-    drawNucleus(tctx, cx + Rb / 2 * sc, y0 + h / 2, "#2a5d8f", rNuc);
+    if (rot) drawOrbital3D(tctx, terms, cx - w / 2, y0, w, h, sc, Rb / 2, thr, pointing, rot, Rb / 2 + ext);
+    else drawFunction(tctx, terms, cx - w / 2, y0, w, h, sc, Rb / 2, thr, pointing);
+    const [du, dv] = nucleusOffset(rot, Rb / 2 * sc);
+    drawNucleus(tctx, cx - du, y0 + h / 2 - dv, "#222", rNuc);
+    drawNucleus(tctx, cx + du, y0 + h / 2 + dv, "#2a5d8f", rNuc);
+  } else if (rot && state.sync3D) {
+    // Les deux OA pondérées tournent comme un seul objet, leurs noyaux se déplacent
+    const gap = CONFIG.pairGap3D * ext;
+    const sc = fit3D(scale, w, h, CONFIG.pairReach3D * ext);
+    const parts = [0, 1].map(a => moPart(mo, a).map(t => ({ ...t, zc: 0 })));
+    const thr = CONFIG.isoFraction * Math.max(...parts.map(p => maxAbs(p, w, h, sc, 0)));
+    const terms = parts.flatMap((p, a) => p.map(t => ({ ...t, zc: (a - 0.5) * gap })));
+    if (thr > 0) drawOrbital3D(tctx, terms, cx - w / 2, y0, w, h, sc, 0, thr, pointing, rot, gap / 2 + ext, parts[0].length);
+    const [du, dv] = nucleusOffset(rot, gap / 2 * sc);
+    drawNucleus(tctx, cx - du, y0 + h / 2 - dv, "#222", rNuc);
+    drawNucleus(tctx, cx + du, y0 + h / 2 + dv, "#2a5d8f", rNuc);
   } else {
     // Chaque OA (pondérée par son coefficient) dans sa moitié de rectangle
     const half = Math.floor(w / 2);
-    const sc = Math.min(scale, h / (2 * ext), half / (2 * ext));
+    const sc = rot ? fit3D(scale, half, h, ext) : Math.min(scale, h / (2 * ext), half / (2 * ext));
     const parts = [0, 1].map(a => moPart(mo, a).map(t => ({ ...t, zc: 0 })));
     const thr = CONFIG.isoFraction * Math.max(...parts.map(p => maxAbs(p, half, h, sc, 0)));
     parts.forEach((p, a) => {
       const x0 = cx - half + a * half;
-      if (p.length && thr > 0) drawFunction(tctx, p, x0, y0, half, h, sc, 0, thr, pointing);
+      if (p.length && thr > 0) {
+        if (rot) drawOrbital3D(tctx, p, x0, y0, half, h, sc, 0, thr, pointing, rotOf(moPartKey(mo, pointing, a)), ext);
+        else drawFunction(tctx, p, x0, y0, half, h, sc, 0, thr, pointing);
+      }
       drawNucleus(tctx, x0 + half / 2, y0 + h / 2, a === 0 ? "#222" : "#2a5d8f", rNuc);
     });
   }
+}
+
+/** Décalage à l'écran (pixels, y vers le bas) d'un point de l'axe z situé à d pixels du centre */
+function nucleusOffset(rot, d) {
+  return rot ? [rot[0][0] * d, -rot[1][0] * d] : [d, 0];
 }
 
 /* =============================================================
@@ -1880,6 +2115,23 @@ sliderR.addEventListener("input", () => {
   update();
 });
 
+if (!gl3D) {
+  chk3D.disabled = true;
+  chk3D.parentElement.title = "Vue 3D indisponible : ce navigateur ne permet pas WebGL";
+}
+chk3D.addEventListener("change", () => {
+  state.show3D = chk3D.checked;
+  rowSync.hidden = !state.show3D;
+  resetView3D();           // l'orientation n'est pas mémorisée d'un passage en 3D à l'autre
+  update();
+});
+chkSync.addEventListener("change", () => {
+  state.sync3D = chkSync.checked;
+  // Resynchroniser : toutes les orbitales reprennent l'orientation commune
+  if (state.sync3D) view3D.own.clear();
+  update();
+});
+
 chkOM.addEventListener("change", () => {
   state.showMO = chkOM.checked;
   update();
@@ -1914,20 +2166,25 @@ function fmtE(E) {
 }
 
 /** Fond, axe z et barre d'échelle de la fenêtre d'agrandissement */
-function drawZoomFrame(pxPerBohr) {
+function drawZoomFrame(pxPerBohr, rot = null) {
   const W = CONFIG.zoomW, H = CONFIG.zoomH;
   zctx.clearRect(0, 0, W, H);
   zctx.fillStyle = "#fffef9";
   zctx.fillRect(0, 0, W, H);
   zctx.strokeStyle = "rgba(0,0,0,0.3)";
   zctx.lineWidth = 1;
-  zctx.setLineDash([5, 4]);
-  zctx.beginPath(); zctx.moveTo(0, H / 2); zctx.lineTo(W, H / 2); zctx.stroke();
-  zctx.setLineDash([]);
-  zctx.fillStyle = "rgba(0,0,0,0.4)";
-  zctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  if (rot) {
+    drawAxes3D(rot, W - 46, H - 46, 26);
+  } else {
+    zctx.setLineDash([5, 4]);
+    zctx.beginPath(); zctx.moveTo(0, H / 2); zctx.lineTo(W, H / 2); zctx.stroke();
+    zctx.setLineDash([]);
+    zctx.fillStyle = "rgba(0,0,0,0.4)";
+    zctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+    zctx.textAlign = "left";
+    zctx.fillText("z", W - 16, H / 2 - 8);
+  }
   zctx.textAlign = "left";
-  zctx.fillText("z", W - 16, H / 2 - 8);
   // Barre d'échelle : 1 Å
   const L = pxPerBohr / BOHR;
   zctx.strokeStyle = "#1a1a2e";
@@ -1938,42 +2195,66 @@ function drawZoomFrame(pxPerBohr) {
   zctx.fillText("1 Å", 16 + L + 6, H - 12);
 }
 
-function labelNucleus(x, text, color) {
+/** Petit repère z, x, y sous l'orientation rot, centré en (x0, y0) */
+function drawAxes3D(rot, x0, y0, len) {
+  zctx.strokeStyle = "rgba(0,0,0,0.3)";
+  zctx.lineWidth = 1;
+  zctx.font = "italic 13px 'Palatino Linotype', Georgia, serif";
+  zctx.textAlign = "center";
+  ["z", "x", "y"].forEach((name, j) => {
+    const [dx, dy] = [rot[0][j] * len, -rot[1][j] * len];
+    zctx.beginPath(); zctx.moveTo(x0, y0); zctx.lineTo(x0 + dx, y0 + dy); zctx.stroke();
+    zctx.fillStyle = "rgba(0,0,0,0.55)";
+    zctx.fillText(name, x0 + dx * 1.3, y0 + dy * 1.3 + 4);
+  });
+}
+
+function labelNucleus(x, text, color, y = CONFIG.zoomH / 2) {
   zctx.fillStyle = color;
   zctx.font = "bold 13px 'Palatino Linotype', Georgia, serif";
   zctx.textAlign = "center";
-  zctx.fillText(text, x, CONFIG.zoomH / 2 + 22);
+  zctx.fillText(text, x, y + 22);
 }
 
 function openZoom(hit) {
   showZoomHint(null);
+  zoomHit = hit;
   const W = CONFIG.zoomW, H = CONFIG.zoomH;
   const fill = 0.9;
+  const rot = state.show3D ? rotOf(hitKey(hit)) : null;
+  const note3D = rot ? "<p>Vue 3D : faire glisser l'orbitale pour la faire tourner.</p>" : "";
+  zoomCvs.style.cursor = rot ? "grab" : "";
 
   if (hit.kind === "ao") {
     const f = hit.f;
     const ext = orbitalExtent(f);
     const sc = fill * Math.min(H / (2 * ext), W / (2 * ext));
-    drawZoomFrame(sc);
+    drawZoomFrame(sc, rot);
     drawAOGlyph(zctx, f, W / 2, 0, W, H, sc, 4);
     labelNucleus(W / 2 + 18, atomName(f.atom), f.atom === 1 ? "#2a5d8f" : "#222");
     zoomTitle.innerHTML = "Orbitale atomique " + aoHTML(f) + " de l'atome " + atomName(f.atom);
     zoomInfo.innerHTML =
       `<p>Énergie α = <strong>${fmtE(f.alpha)}</strong>, exposant de Slater ζ = ${f.zeta.toFixed(3)} bohr<sup>−1</sup>.</p>`
       + `<p>Contour tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |χ|.</p>`
-      + (f.type === "py" ? "<p>Vue légèrement décalée : le lobe qui vient vers nous cache en partie celui de derrière.</p>" : "");
+      + (f.type === "py" && !rot ? "<p>Vue légèrement décalée : le lobe qui vient vers nous cache en partie celui de derrière.</p>" : "")
+      + note3D;
   } else {
     const mo = hit.mo;
     const Rb = state.R / BOHR;
-    const ext = moExtent(mo);
+    const ext = rot ? moRawExtent(mo) : moExtent(mo);
     let sc;
-    if (state.showMO) sc = fill * Math.min(H / (2 * ext), W / (Rb + 2 * ext));
+    if (state.showMO) sc = fill * Math.min(rot ? H / (Rb + 2 * ext) : H / (2 * ext), W / (Rb + 2 * ext));
+    else if (rot && state.sync3D) sc = fill * Math.min(H, W) / (2 * CONFIG.pairReach3D * ext);
     else sc = fill * Math.min(H / (2 * ext), W / 2 / (2 * ext));
-    drawZoomFrame(sc);
+    // Deux OA côte à côte : chacune a son orientation, donc son repère
+    const pair = rot && !state.showMO && !state.sync3D;
+    drawZoomFrame(sc, pair ? rotOf(moPartKey(mo, hit.pointing, 1)) : rot);
+    if (pair) drawAxes3D(rotOf(moPartKey(mo, hit.pointing, 0)), W / 2 - 46, H - 46, 26);
     drawMOGlyph(zctx, mo, W / 2, 0, W, H, sc, 4, hit.pointing);
-    if (state.showMO) {
-      labelNucleus(W / 2 - Rb / 2 * sc, atomName(0), "#222");
-      labelNucleus(W / 2 + Rb / 2 * sc, atomName(1), "#2a5d8f");
+    if (state.showMO || (rot && state.sync3D)) {
+      const [du, dv] = nucleusOffset(rot, (state.showMO ? Rb : CONFIG.pairGap3D * ext) / 2 * sc);
+      labelNucleus(W / 2 - du, atomName(0), "#222", H / 2 - dv);
+      labelNucleus(W / 2 + du, atomName(1), "#2a5d8f", H / 2 + dv);
     } else {
       labelNucleus(W / 4, atomName(0), "#222");
       labelNucleus(3 * W / 4, atomName(1), "#2a5d8f");
@@ -1990,16 +2271,53 @@ function openZoom(hit) {
     const character = { liant: "liante", antiliant: "antiliante", nl: "non liante" }[mo.kind];
     zoomTitle.innerHTML = "Orbitale moléculaire " + moHTML(mo)
       + (mo.deg === 2 ? " (deux OM dégénérées ; ici celle "
-        + (hit.pointing ? "d'axe y, qui pointe vers nous" : "du plan xz") + ")" : "");
+        + (hit.pointing ? (rot ? "d'axe y" : "d'axe y, qui pointe vers nous") : "du plan xz") + ")" : "");
     zoomInfo.innerHTML =
       `<div class="formula">ψ = ${terms}</div>`
       + `<p>Énergie : <strong>${fmtE(mo.E)}</strong> — OM ${character} — `
       + `${nEl} électron${nEl > 1 ? "s" : ""}${mo.deg === 2 ? " (pour les deux OM)" : ""}.</p>`
       + `<p>${state.showMO ? "Contour de l'OM" : "Les deux OA pondérées par leurs coefficients"}, `
       + `tracé à ${Math.round(100 * CONFIG.isoFraction)} % de la valeur maximale de |ψ|, R = ${state.R.toFixed(2)} Å.</p>`
-      + (hit.pointing ? "<p>Vue légèrement décalée : le lobe qui vient vers nous cache en partie celui de derrière.</p>" : "");
+      + (hit.pointing && !rot ? "<p>Vue légèrement décalée : le lobe qui vient vers nous cache en partie celui de derrière.</p>" : "")
+      + note3D;
   }
   zoomEl.hidden = false;
+}
+
+let zoomHit = null;        // orbitale affichée dans la fenêtre d'agrandissement
+let zoomDrag = null;       // dernière position de la souris pendant une rotation dans cette fenêtre
+let redrawPending = false;
+
+/** Redessine à la prochaine image : une rotation produit plus d'événements que d'images */
+function redrawSoon() {
+  if (redrawPending) return;
+  redrawPending = true;
+  requestAnimationFrame(() => {
+    redrawPending = false;
+    update();
+    if (!zoomEl.hidden) openZoom(zoomHit);
+  });
+}
+
+zoomCvs.addEventListener("pointerdown", e => {
+  if (!state.show3D || e.button) return;
+  zoomCvs.setPointerCapture(e.pointerId);
+  const rect = zoomCvs.getBoundingClientRect();
+  zoomDrag = { key: grabbedKey(zoomHit, (e.clientX - rect.left) / rect.width), x: e.clientX, y: e.clientY };
+  zoomCvs.style.cursor = "grabbing";
+});
+zoomCvs.addEventListener("pointermove", e => {
+  if (!zoomDrag) return;
+  const k = CONFIG.zoomW / zoomCvs.getBoundingClientRect().width;
+  rotateOrbital(zoomDrag.key, (e.clientX - zoomDrag.x) * k, (e.clientY - zoomDrag.y) * k);
+  zoomDrag.x = e.clientX; zoomDrag.y = e.clientY;
+  redrawSoon();
+});
+for (const type of ["pointerup", "pointercancel"]) {
+  zoomCvs.addEventListener(type, () => {
+    zoomDrag = null;
+    if (state.show3D) zoomCvs.style.cursor = "grab";
+  });
 }
 
 function closeZoom() {
@@ -2065,7 +2383,12 @@ function startDrag(e) {
       return;
     }
     const hit = hitAt(px, py);
-    if (hit) { e.preventDefault(); openZoom(hit); }
+    if (hit) {
+      e.preventDefault();
+      // En 3D, on attend de savoir si c'est un clic (agrandir) ou un glissement (tourner)
+      if (!state.show3D) openZoom(hit);
+      else if (!e.button) state.rotating = { hit, key: grabbedKey(hit, (px - hit.x) / hit.w), x: px, y: py, moved: false };
+    }
     return;
   }
   e.preventDefault();
@@ -2083,12 +2406,23 @@ function moveDrag(e) {
     update();
     return;
   }
+  if (state.rotating) {
+    e.preventDefault();
+    const r = state.rotating;
+    if (!r.moved && Math.hypot(px - r.x, py - r.y) < 3) return;
+    r.moved = true;
+    rotateOrbital(r.key, px - r.x, py - r.y);
+    r.x = px; r.y = py;
+    cvs.style.cursor = "grabbing";
+    redrawSoon();
+    return;
+  }
   if (!state.dragging) {
     const onHandle = isNearAxis(px, py) || aoBoxAt(px, py);
     const hit = onHandle ? null : hitAt(px, py);
     cvs.style.cursor = isNearAxis(px, py) ? "ew-resize"
       : aoBoxAt(px, py) ? "ns-resize"
-      : hit ? "zoom-in" : "default";
+      : hit ? (state.show3D ? "grab" : "zoom-in") : "default";
     showZoomHint(e.touches ? null : hit);   // pas de survol sur écran tactile
     return;
   }
@@ -2097,7 +2431,13 @@ function moveDrag(e) {
   update();
 }
 
-function endDrag() {
+function endDrag(e) {
+  if (state.rotating) {
+    const { hit, moved } = state.rotating;
+    state.rotating = null;
+    if (!moved && e.type !== "mouseleave") openZoom(hit);
+    return;
+  }
   if (!state.dragging && !state.dragAO) return;
   state.dragging = false;
   state.dragAO = null;
@@ -2126,6 +2466,12 @@ function resetAll() {
   }
   state.showMO = true;
   chkOM.checked = true;
+  state.show3D = false;
+  chk3D.checked = false;
+  state.sync3D = true;
+  chkSync.checked = true;
+  rowSync.hidden = true;
+  resetView3D();
   syncAtomUI(0);
   syncAtomUI(1);
   applyInitialDistance();
