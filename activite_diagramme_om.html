@@ -365,6 +365,25 @@ canvas { max-width: 100%; height: auto; cursor: default; }
 .panel { flex: 0 0 auto; }
 canvas { max-width: 100%; height: auto; }
 
+/* Zone cliquable survolée : cadre léger et loupe, sans intercepter la souris */
+.zoom-hint {
+  position: absolute;
+  z-index: 4;
+  box-sizing: border-box;
+  border: 1px solid rgba(42,93,143,0.55);
+  border-radius: 2px;
+  color: var(--accent2);
+  pointer-events: none;
+}
+.zoom-hint svg {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  display: block;
+  background: rgba(255,255,255,0.85);
+  border-radius: 2px;
+}
+
 /* Légende : étiquette en haut à gauche du tracé, légende en fenêtre au survol */
 .legend-hover {
   position: absolute;
@@ -442,6 +461,12 @@ canvas { max-width: 100%; height: auto; }
         </div>
       </div>
     <canvas id="cvs" width="900" height="820"></canvas>
+    <div class="zoom-hint" id="zoomHint" hidden>
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <line x1="10" y1="10" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
   </div>
 
   <div class="panel">
@@ -781,6 +806,7 @@ let state = {
    ============================================================= */
 const cvs = document.getElementById("cvs");
 const ctx = cvs.getContext("2d");
+const zoomHint = document.getElementById("zoomHint");
 const ui = [0, 1].map(i => {
   const s = i === 0 ? "A" : "B";
   return {
@@ -1712,6 +1738,7 @@ function drawPolarity(pol, verdict, xL, xR, yDist) {
    MISE À JOUR COMPLÈTE
    ============================================================= */
 function update() {
+  showZoomHint(null);      // les vignettes peuvent bouger : le cadre reviendra au prochain survol
   const data = computeMOs();
   const { mos, moOcc, pol, verdict } = draw(data);
 
@@ -1919,6 +1946,7 @@ function labelNucleus(x, text, color) {
 }
 
 function openZoom(hit) {
+  showZoomHint(null);
   const W = CONFIG.zoomW, H = CONFIG.zoomH;
   const fill = 0.9;
 
@@ -1991,6 +2019,17 @@ function hitAt(px, py) {
   return hitRects.find(r => (r.kind === "ao" || r.kind === "mo") && inRect(r, px, py));
 }
 
+/** Cadre et loupe autour de la vignette qu'un clic agrandirait (null : les masque) */
+function showZoomHint(r) {
+  zoomHint.hidden = !r;
+  if (!r) return;
+  const k = cvs.clientWidth / CONFIG.canvasW;
+  zoomHint.style.left = cvs.offsetLeft + r.x * k + "px";
+  zoomHint.style.top = cvs.offsetTop + r.y * k + "px";
+  zoomHint.style.width = r.w * k + "px";
+  zoomHint.style.height = r.h * k + "px";
+}
+
 /** Cases d'OA déplaçables verticalement (mode libre uniquement) */
 function aoBoxAt(px, py) {
   if (state.mode !== "libre") return null;
@@ -2045,9 +2084,12 @@ function moveDrag(e) {
     return;
   }
   if (!state.dragging) {
+    const onHandle = isNearAxis(px, py) || aoBoxAt(px, py);
+    const hit = onHandle ? null : hitAt(px, py);
     cvs.style.cursor = isNearAxis(px, py) ? "ew-resize"
       : aoBoxAt(px, py) ? "ns-resize"
-      : hitAt(px, py) ? "zoom-in" : "default";
+      : hit ? "zoom-in" : "default";
+    showZoomHint(e.touches ? null : hit);   // pas de survol sur écran tactile
     return;
   }
   e.preventDefault();
@@ -2066,6 +2108,7 @@ cvs.addEventListener("mousedown", startDrag);
 cvs.addEventListener("mousemove", moveDrag);
 cvs.addEventListener("mouseup", endDrag);
 cvs.addEventListener("mouseleave", endDrag);
+cvs.addEventListener("mouseleave", () => showZoomHint(null));
 cvs.addEventListener("touchstart", startDrag, { passive: false });
 cvs.addEventListener("touchmove", moveDrag, { passive: false });
 cvs.addEventListener("touchend", endDrag);
